@@ -39,6 +39,7 @@ module.exports = {
             options: {
               module: 'Assets',
               tagger: 'AssetPath',
+              package: 'rkrupinski/yt-repeater',
             },
           },
           'elm-webpack-loader',
@@ -67,6 +68,7 @@ module.exports = {
     new webpack.NamedModulesPlugin(),
     new HtmlWebpackPlugin({
       title: 'YouTube repeater',
+      template: 'src/index.ejs',
     }),
   ],
 
