@@ -31,6 +31,7 @@ module.exports = {
         exclude: [
           /elm-stuff/,
           /node_modules/,
+          /Stylesheets\.elm$/,
         ],
         use: [
           'elm-hot-loader',
@@ -51,6 +52,14 @@ module.exports = {
         options: {
           name: '[name]-[hash:8].[ext]',
         },
+      },
+      {
+        test: /Stylesheets\.elm$/,
+        use: [
+          'style-loader',
+          'css-loader',
+          'elm-css-webpack-loader',
+        ],
       },
     ],
   },

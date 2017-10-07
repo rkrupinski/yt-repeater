@@ -112,12 +112,15 @@ renderControls : Maybe Video -> Html Msg
 renderControls video =
     case video of
         Just { duration, start, end } ->
-            pre []
-                [ text <| toString duration
-                , text ", "
-                , text <| toString start
-                , text ", "
-                , text <| toString end
+            div []
+                [ pre []
+                    [ text <| toString duration
+                    , text ", "
+                    , text <| toString start
+                    , text ", "
+                    , text <| toString end
+                    ]
+                , button [] [ text "Apply" ]
                 ]
 
         _ ->

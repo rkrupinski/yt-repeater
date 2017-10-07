@@ -1,5 +1,6 @@
 import { Main } from 'Main';
 import init from 'ytApi';
+import 'Stylesheets';
 
 const app = Main.embed(document.querySelector('#controls'));
 
