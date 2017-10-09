@@ -4,10 +4,19 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Slider.Core as Slider
+import String exposing (..)
 import Slider.Helpers exposing (valueParser, valueFormatter, stepParser)
 import Ports exposing (..)
+import Css exposing (asPairs)
 import Assets
+import Styles
+
+
+styles : List Css.Style -> Attribute msg
+styles =
+    asPairs >> Html.Attributes.style
 
 
 type Msg
@@ -16,6 +25,7 @@ type Msg
     | SubmitVideoId
     | VideoMeta (Result String Meta)
     | SliderMsg Slider.Msg
+    | ApplyRange
 
 
 main : Program Never Model Msg
@@ -50,9 +60,9 @@ type alias Video =
 
 defaultRangeConfig : Slider.Config
 defaultRangeConfig =
-    { size = Just 640
-    , values = Just ( 0, 1 )
-    , step = Just 1
+    { size = Just 400
+    , values = Nothing
+    , step = Nothing
     }
 
 
@@ -62,7 +72,7 @@ init =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ video, range } as model) =
+update msg ({ video, range, videoId } as model) =
     case msg of
         ApiReady ready ->
             { model | apiReady = ready } ! []
@@ -71,7 +81,7 @@ update msg ({ video, range } as model) =
             { model | videoId = Just <| String.trim current } ! []
 
         SubmitVideoId ->
-            model ! [ Ports.videoId <| Maybe.withDefault "" model.videoId ]
+            model ! [ Ports.videoId <| Maybe.withDefault "" videoId ]
 
         VideoMeta (Ok { duration }) ->
             let
@@ -105,7 +115,7 @@ update msg ({ video, range } as model) =
                     | video = Just newVideo
                     , range = Just <| Slider.init rangeConfig
                 }
-                    ! []
+                    ! [ Ports.range <| encodeRange start end ]
 
         VideoMeta (Result.Err _) ->
             model ! []
@@ -150,6 +160,22 @@ update msg ({ video, range } as model) =
                 }
                     ! [ Cmd.map SliderMsg cmd ]
 
+        ApplyRange ->
+            case (video) of
+                Just { start, end } ->
+                    model ! [ Ports.range <| encodeRange start end ]
+
+                _ ->
+                    model ! []
+
+
+encodeRange : Float -> Float -> Encode.Value
+encodeRange start end =
+    Encode.object
+        [ ( "start", Encode.float start )
+        , ( "end", Encode.float end )
+        ]
+
 
 view : Model -> Html Msg
 view model =
@@ -158,12 +184,12 @@ view model =
         logoUrl =
             Assets.path Assets.logo
     in
-        div []
-            [ h1 []
+        div [ styles Styles.container ]
+            [ h1 [ styles Styles.heading ]
                 [ img
                     [ src logoUrl
                     , alt "YouTube"
-                    , width 100
+                    , styles Styles.logo
                     ]
                     []
                 , text " "
@@ -171,37 +197,90 @@ view model =
                 ]
             , renderForm model
             , renderControls model
+            , renderPlayer
+            , a [ href "https://github.com/rkrupinski/yt-repeater" ] [ text "View source" ]
             ]
 
 
 renderForm : Model -> Html Msg
 renderForm { apiReady } =
     if apiReady then
-        Html.form [ onSubmit SubmitVideoId ]
-            [ label [ for "videoId" ] [ text "Video id:" ]
+        Html.form
+            [ onSubmit SubmitVideoId
+            , styles Styles.section
+            ]
+            [ label
+                [ for "videoId"
+                , styles Styles.formElement
+                ]
+                [ text "Video id:" ]
             , input
                 [ id "videoId"
                 , name "videoId"
                 , onInput InputVideoId
+                , styles Styles.formElement
                 ]
                 []
-            , input [ type_ "submit" ] []
+            , button
+                [ styles Styles.formElement
+                , type_ "submit"
+                ]
+                [ text "Load" ]
             ]
     else
         p [] [ text "Loading..." ]
 
 
+formatTime : Float -> String
+formatTime seconds =
+    let
+        minutes : String
+        minutes =
+            seconds
+                |> round
+                |> flip (//) 60
+                |> toString
+                |> padLeft 2 '0'
+
+        seconds_ : String
+        seconds_ =
+            seconds
+                |> round
+                |> flip (%) 60
+                |> toString
+                |> padLeft 2 '0'
+    in
+        minutes ++ ":" ++ seconds_
+
+
 renderControls : Model -> Html Msg
-renderControls { range } =
-    case range of
-        Just currentRange ->
-            div []
+renderControls { range, video } =
+    case ( range, video ) of
+        ( Just currentRange, Just { start, end } ) ->
+            div [ styles Styles.section ]
                 [ Html.map SliderMsg <| Slider.view currentRange
-                , button [] [ text "Apply" ]
+                , p []
+                    [ text <| formatTime start
+                    , text " - "
+                    , text <| formatTime end
+                    , text " "
+                    ]
+                , button
+                    [ onClick ApplyRange
+                    , styles Styles.formElement
+                    ]
+                    [ text "Apply range" ]
                 ]
 
         _ ->
             text ""
+
+
+renderPlayer : Html Msg
+renderPlayer =
+    div [ styles Styles.section ]
+        [ div [ id "player" ] []
+        ]
 
 
 decodeVideoMeta : Decode.Value -> Result String Meta

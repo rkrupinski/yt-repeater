@@ -17,7 +17,7 @@ export default function init(id, {
         height,
         playerVars: {
           autoplay: 1,
-          controls: 0,
+          controls: 1,
         },
         events: {
           onReady: function (e) {

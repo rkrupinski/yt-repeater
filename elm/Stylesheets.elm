@@ -10,7 +10,7 @@ port files : CssFileStructure -> Cmd msg
 fileStructure : CssFileStructure
 fileStructure =
     Css.File.toFileStructure
-        [ ( "slider.css", Css.File.compile [ styles ] ) ]
+        [ ( "app.css", Css.File.compile [ styles ] ) ]
 
 
 main : CssCompilerProgram

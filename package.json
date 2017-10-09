@@ -5,7 +5,8 @@
   "repository": "git@github.com:rkrupinski/yt-repeater.git",
   "license": "BSD3",
   "scripts": {
-    "start": "webpack-dev-server"
+    "start": "webpack-dev-server",
+    "build": "webpack"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",

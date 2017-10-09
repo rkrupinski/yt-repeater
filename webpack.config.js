@@ -77,7 +77,6 @@ module.exports = {
     new webpack.NamedModulesPlugin(),
     new HtmlWebpackPlugin({
       title: 'YouTube repeater',
-      template: 'src/index.ejs',
     }),
   ],
 
