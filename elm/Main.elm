@@ -4,6 +4,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode
+import Slider.Core as Slider
+import Slider.Helpers exposing (valueParser, valueFormatter, stepParser)
 import Ports exposing (..)
 import Assets
 
@@ -13,6 +15,7 @@ type Msg
     | InputVideoId String
     | SubmitVideoId
     | VideoMeta (Result String Meta)
+    | SliderMsg Slider.Msg
 
 
 main : Program Never Model Msg
@@ -29,6 +32,7 @@ type alias Model =
     { apiReady : Bool
     , videoId : Maybe String
     , video : Maybe Video
+    , range : Maybe Slider.Model
     }
 
 
@@ -44,13 +48,21 @@ type alias Video =
     }
 
 
+defaultRangeConfig : Slider.Config
+defaultRangeConfig =
+    { size = Just 640
+    , values = Just ( 0, 1 )
+    , step = Just 1
+    }
+
+
 init : ( Model, Cmd Msg )
 init =
-    Model False Nothing Nothing ! []
+    Model False Nothing Nothing Nothing ! []
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update msg ({ video, range } as model) =
     case msg of
         ApiReady ready ->
             { model | apiReady = ready } ! []
@@ -62,14 +74,85 @@ update msg model =
             model ! [ Ports.videoId <| Maybe.withDefault "" model.videoId ]
 
         VideoMeta (Ok { duration }) ->
-            { model | video = Just <| Video duration 0 duration } ! []
+            let
+                newVideo : Video
+                newVideo =
+                    Video duration 0 duration
+
+                { start, end } =
+                    newVideo
+
+                sliderRange : Slider.Range
+                sliderRange =
+                    ( 0, duration )
+
+                parseValue : Float -> Float
+                parseValue =
+                    valueParser sliderRange
+
+                parseStep : Float -> Float
+                parseStep =
+                    stepParser sliderRange
+
+                rangeConfig : Slider.Config
+                rangeConfig =
+                    { defaultRangeConfig
+                        | values = Just ( parseValue start, parseValue end )
+                        , step = Just <| parseStep 1
+                    }
+            in
+                { model
+                    | video = Just newVideo
+                    , range = Just <| Slider.init rangeConfig
+                }
+                    ! []
 
         VideoMeta (Result.Err _) ->
             model ! []
 
+        SliderMsg sliderMsg ->
+            let
+                ( newRange, cmd ) =
+                    case range of
+                        Just currentRange ->
+                            Slider.update sliderMsg currentRange
+
+                        _ ->
+                            Slider.init defaultRangeConfig ! []
+
+                ( from, to ) =
+                    Slider.getValues newRange
+
+                newVideo : Video
+                newVideo =
+                    case video of
+                        Just ({ duration } as currentVideo) ->
+                            let
+                                sliderRange : Slider.Range
+                                sliderRange =
+                                    ( 0, duration )
+
+                                formatValue : Float -> Float
+                                formatValue =
+                                    valueFormatter sliderRange
+                            in
+                                { currentVideo
+                                    | start = formatValue from
+                                    , end = formatValue to
+                                }
+
+                        _ ->
+                            Video 0 0 0
+            in
+                { model
+                    | range = Just newRange
+                    , video = Just newVideo
+                }
+                    ! [ Cmd.map SliderMsg cmd ]
+
 
 view : Model -> Html Msg
-view { apiReady, video } =
+view model =
     let
         logoUrl : String
         logoUrl =
@@ -86,14 +169,14 @@ view { apiReady, video } =
                 , text " "
                 , text "repeater"
                 ]
-            , renderForm apiReady
-            , renderControls video
+            , renderForm model
+            , renderControls model
             ]
 
 
-renderForm : Bool -> Html Msg
-renderForm ready =
-    if ready then
+renderForm : Model -> Html Msg
+renderForm { apiReady } =
+    if apiReady then
         Html.form [ onSubmit SubmitVideoId ]
             [ label [ for "videoId" ] [ text "Video id:" ]
             , input
@@ -108,18 +191,12 @@ renderForm ready =
         p [] [ text "Loading..." ]
 
 
-renderControls : Maybe Video -> Html Msg
-renderControls video =
-    case video of
-        Just { duration, start, end } ->
+renderControls : Model -> Html Msg
+renderControls { range } =
+    case range of
+        Just currentRange ->
             div []
-                [ pre []
-                    [ text <| toString duration
-                    , text ", "
-                    , text <| toString start
-                    , text ", "
-                    , text <| toString end
-                    ]
+                [ Html.map SliderMsg <| Slider.view currentRange
                 , button [] [ text "Apply" ]
                 ]
 
@@ -129,11 +206,13 @@ renderControls video =
 
 decodeVideoMeta : Decode.Value -> Result String Meta
 decodeVideoMeta =
-    Decode.decodeValue <| Decode.map Meta <| Decode.field "duration" Decode.float
+    Decode.decodeValue <|
+        Decode.map Meta <|
+            Decode.field "duration" Decode.float
 
 
 subscriptions : Model -> Sub Msg
-subscriptions { apiReady } =
+subscriptions { apiReady, video, range } =
     let
         apiSub : Sub Msg
         apiSub =
@@ -148,8 +227,18 @@ subscriptions { apiReady } =
                 Ports.videoMeta (decodeVideoMeta >> VideoMeta)
             else
                 Sub.none
+
+        rangeSub : Sub Msg
+        rangeSub =
+            case ( video, range ) of
+                ( Just _, Just currentRange ) ->
+                    Sub.map SliderMsg <| Slider.subscriptions currentRange
+
+                _ ->
+                    Sub.none
     in
         Sub.batch
             [ apiSub
             , metaSub
+            , rangeSub
             ]
