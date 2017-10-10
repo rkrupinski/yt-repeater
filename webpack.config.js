@@ -1,14 +1,24 @@
 const { resolve } = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+const MinifyPlugin = require('babel-minify-webpack-plugin');
+
+const TARGET = process.env.npm_lifecycle_event;
 
 module.exports = {
   entry: resolve(__dirname, 'src', 'app.js'),
 
   output: {
     path: resolve(__dirname, 'build'),
-    filename: '[name].js',
-    publicPath: '/',
+    filename: TARGET === 'start' ? '[name].js' : '[name]-[hash:8].js',
+  },
+
+  resolveLoader: {
+    modules: [
+      'node_modules',
+      resolve(__dirname, 'loaders'),
+    ],
   },
 
   resolve: {
@@ -34,7 +44,7 @@ module.exports = {
           /Stylesheets\.elm$/,
         ],
         use: [
-          'elm-hot-loader',
+          TARGET === 'start' ? 'elm-hot-loader' : 'identity-loader',
           {
             loader: 'elm-assets-loader',
             options: {
@@ -72,13 +82,27 @@ module.exports = {
     publicPath: '/',
   },
 
-  plugins: [
-    new webpack.HotModuleReplacementPlugin(),
-    new webpack.NamedModulesPlugin(),
-    new HtmlWebpackPlugin({
-      title: 'YouTube repeater',
-    }),
-  ],
+  plugins: TARGET === 'start' ?
+      [
+        new webpack.HotModuleReplacementPlugin(),
+        new webpack.NamedModulesPlugin(),
+        new HtmlWebpackPlugin({
+          title: 'YouTube repeater',
+        }),
+      ] :
+      [
+        new CleanWebpackPlugin([
+          resolve(__dirname, 'build'),
+        ]),
+        new MinifyPlugin(),
+        new webpack.optimize.ModuleConcatenationPlugin(),
+        new HtmlWebpackPlugin({
+          title: 'YouTube repeater',
+          minify: {
+            collapseWhitespace: true,
+          },
+        }),
+      ],
 
-  devtool: 'cheap-module-eval-source-map',
+  devtool: TARGET === 'start' ? 'cheap-module-eval-source-map' : undefined,
 };
