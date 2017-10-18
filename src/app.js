@@ -1,5 +1,11 @@
-import 'youtubeEmbed';
 import 'Stylesheets';
+import polyfill from 'webcomponents';
+import thunk from 'youtubeEmbed';
 import { Main } from 'Main';
 
-const app = Main.fullscreen();
+polyfill()
+  .then(function () {
+    customElements.define('youtube-embed', thunk());
+
+    Main.fullscreen();
+  });
