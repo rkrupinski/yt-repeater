@@ -6,13 +6,13 @@ function appendScript() {
   firstScript.parentNode.insertBefore(script, firstScript);
 }
 
-export default function init(id, {
+export default function init(container, {
   width = 640,
   height = 480,
 } = {}) {
   return new Promise(function (resolve, reject) {
     window.onYouTubeIframeAPIReady = function () {
-      new YT.Player(id, {
+      new YT.Player(container, {
         width,
         height,
         playerVars: {

@@ -8,7 +8,6 @@ import Json.Encode as Encode
 import Slider.Core as Slider
 import String exposing (..)
 import Slider.Helpers exposing (valueParser, valueFormatter, stepParser)
-import Ports exposing (..)
 import Css exposing (asPairs)
 import Assets
 import Styles
@@ -20,12 +19,18 @@ styles =
 
 
 type Msg
-    = ApiReady Bool
+    = YTApiReady
     | InputVideoId String
     | SubmitVideoId
-    | VideoMeta (Result String Meta)
+    | VideoMeta Float
     | SliderMsg Slider.Msg
     | ApplyRange
+
+
+type alias Attrs =
+    { videoId : String
+    , range : String
+    }
 
 
 main : Program Never Model Msg
@@ -41,25 +46,14 @@ main =
 type alias Model =
     { apiReady : Bool
     , videoId : Maybe String
-    , video : Maybe Video
-    , range : Maybe Slider.Model
+    , videoDuration : Maybe Float
+    , slider : Maybe Slider.Model
+    , attrs : Attrs
     }
 
 
-type alias Meta =
-    { duration : Float
-    }
-
-
-type alias Video =
-    { duration : Float
-    , start : Float
-    , end : Float
-    }
-
-
-defaultRangeConfig : Slider.Config
-defaultRangeConfig =
+defaultSliderConfig : Slider.Config
+defaultSliderConfig =
     { size = Just 400
     , values = Nothing
     , step = Nothing
@@ -68,102 +62,73 @@ defaultRangeConfig =
 
 init : ( Model, Cmd Msg )
 init =
-    Model False Nothing Nothing Nothing ! []
+    Model False Nothing Nothing Nothing (Attrs "" "") ! []
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ video, range, videoId } as model) =
+update msg ({ videoId, videoDuration, slider, attrs } as model) =
     case msg of
-        ApiReady ready ->
-            { model | apiReady = ready } ! []
+        YTApiReady ->
+            { model | apiReady = True } ! []
 
-        InputVideoId current ->
-            { model | videoId = Just <| String.trim current } ! []
+        InputVideoId value ->
+            { model | videoId = value |> String.trim |> Just } ! []
 
         SubmitVideoId ->
-            model ! [ Ports.videoId <| Maybe.withDefault "" videoId ]
-
-        VideoMeta (Ok { duration }) ->
             let
-                newVideo : Video
-                newVideo =
-                    Video duration 0 duration
+                newAttrs : Attrs
+                newAttrs =
+                    case videoId of
+                        Just videoId_ ->
+                            { attrs | videoId = videoId_ }
 
-                { start, end } =
-                    newVideo
+                        _ ->
+                            attrs
+            in
+                { model | attrs = newAttrs } ! []
 
-                sliderRange : Slider.Range
-                sliderRange =
-                    ( 0, duration )
+        VideoMeta duration ->
+            let
+                sliderConfig : Slider.Config
+                sliderConfig =
+                    { defaultSliderConfig | step = Just <| stepParser ( 0, duration ) 1 }
 
-                parseValue : Float -> Float
-                parseValue =
-                    valueParser sliderRange
+                slider : Slider.Model
+                slider =
+                    Slider.init sliderConfig
 
-                parseStep : Float -> Float
-                parseStep =
-                    stepParser sliderRange
-
-                rangeConfig : Slider.Config
-                rangeConfig =
-                    { defaultRangeConfig
-                        | values = Just ( parseValue start, parseValue end )
-                        , step = Just <| parseStep 1
-                    }
+                newAttrs : Attrs
+                newAttrs =
+                    { attrs | range = formatRange slider duration }
             in
                 { model
-                    | video = Just newVideo
-                    , range = Just <| Slider.init rangeConfig
+                    | videoDuration = Just duration
+                    , slider = Just slider
+                    , attrs = newAttrs
                 }
-                    ! [ Ports.range <| encodeRange start end ]
-
-        VideoMeta (Result.Err _) ->
-            model ! []
+                    ! []
 
         SliderMsg sliderMsg ->
-            let
-                ( newRange, cmd ) =
-                    case range of
-                        Just currentRange ->
-                            Slider.update sliderMsg currentRange
+            case slider of
+                Just slider_ ->
+                    let
+                        ( newSlider, cmd ) =
+                            Slider.update sliderMsg slider_
+                    in
+                        { model | slider = Just newSlider } ! [ Cmd.map SliderMsg cmd ]
 
-                        _ ->
-                            Slider.init defaultRangeConfig ! []
-
-                ( from, to ) =
-                    Slider.getValues newRange
-
-                newVideo : Video
-                newVideo =
-                    case video of
-                        Just ({ duration } as currentVideo) ->
-                            let
-                                sliderRange : Slider.Range
-                                sliderRange =
-                                    ( 0, duration )
-
-                                formatValue : Float -> Float
-                                formatValue =
-                                    valueFormatter sliderRange
-                            in
-                                { currentVideo
-                                    | start = formatValue from
-                                    , end = formatValue to
-                                }
-
-                        _ ->
-                            Video 0 0 0
-            in
-                { model
-                    | range = Just newRange
-                    , video = Just newVideo
-                }
-                    ! [ Cmd.map SliderMsg cmd ]
+                _ ->
+                    model ! []
 
         ApplyRange ->
-            case (video) of
-                Just { start, end } ->
-                    model ! [ Ports.range <| encodeRange start end ]
+            case ( slider, videoDuration ) of
+                ( Just slider_, Just duration ) ->
+                    let
+                        newAttrs : Attrs
+                        newAttrs =
+                            { attrs | range = formatRange slider_ duration }
+                    in
+                        { model | attrs = newAttrs } ! []
 
                 _ ->
                     model ! []
@@ -197,7 +162,7 @@ view model =
                 ]
             , renderForm model
             , renderControls model
-            , renderPlayer
+            , renderPlayer model
             , a [ href "https://github.com/rkrupinski/yt-repeater" ] [ text "View source" ]
             ]
 
@@ -231,93 +196,114 @@ renderForm { apiReady } =
         p [] [ text "Loading..." ]
 
 
+formatRange : Slider.Model -> Float -> String
+formatRange slider duration =
+    let
+        values : Slider.Values
+        values =
+            Slider.getValues slider
+
+        formatValue : Float -> Float
+        formatValue =
+            valueFormatter ( 0, duration )
+
+        ( start, end ) =
+            values
+                |> Tuple.mapFirst formatValue
+                |> Tuple.mapSecond formatValue
+    in
+        (toString start) ++ "-" ++ (toString end)
+
+
 formatTime : Float -> String
 formatTime seconds =
     let
-        minutes : String
-        minutes =
-            seconds
-                |> round
-                |> flip (//) 60
-                |> toString
-                |> padLeft 2 '0'
-
-        seconds_ : String
+        seconds_ : Int
         seconds_ =
-            seconds
-                |> round
+            round seconds
+
+        hh : Int
+        hh =
+            seconds_ // 3600
+
+        mm : Int
+        mm =
+            seconds_
+                |> flip (%) 3600
+                |> flip (//) 60
+
+        ss : Int
+        ss =
+            seconds_
+                |> flip (%) 3600
                 |> flip (%) 60
-                |> toString
-                |> padLeft 2 '0'
     in
-        minutes ++ ":" ++ seconds_
+        [ hh, mm, ss ]
+            |> List.map toString
+            |> List.map (padLeft 2 '0')
+            |> join ":"
 
 
 renderControls : Model -> Html Msg
-renderControls { range, video } =
-    case ( range, video ) of
-        ( Just currentRange, Just { start, end } ) ->
-            div [ styles Styles.section ]
-                [ Html.map SliderMsg <| Slider.view currentRange
-                , p []
-                    [ text <| formatTime start
-                    , text " - "
-                    , text <| formatTime end
-                    , text " "
+renderControls { videoDuration, slider } =
+    case ( videoDuration, slider ) of
+        ( Just duration, Just slider_ ) ->
+            let
+                ( start, end ) =
+                    Slider.getValues slider_
+
+                formatValue : Float -> Float
+                formatValue =
+                    valueFormatter ( 0, duration )
+            in
+                div [ styles Styles.section ]
+                    [ Html.map SliderMsg <| Slider.view slider_
+                    , p []
+                        [ text <| formatTime <| formatValue start
+                        , text " - "
+                        , text <| formatTime <| formatValue end
+                        ]
+                    , button
+                        [ onClick ApplyRange
+                        , styles Styles.formElement
+                        ]
+                        [ text "Apply range" ]
                     ]
-                , button
-                    [ onClick ApplyRange
-                    , styles Styles.formElement
-                    ]
-                    [ text "Apply range" ]
-                ]
 
         _ ->
             text ""
 
 
-renderPlayer : Html Msg
-renderPlayer =
-    div [ styles Styles.section ]
-        [ div [ id "player" ] []
-        ]
+renderPlayer : Model -> Html Msg
+renderPlayer { videoDuration, slider, attrs } =
+    let
+        decodeApiReady : Decode.Decoder Msg
+        decodeApiReady =
+            Decode.succeed YTApiReady
 
+        decodeVideoMeta : Decode.Decoder Msg
+        decodeVideoMeta =
+            Decode.map VideoMeta <| Decode.field "detail" Decode.float
 
-decodeVideoMeta : Decode.Value -> Result String Meta
-decodeVideoMeta =
-    Decode.decodeValue <|
-        Decode.map Meta <|
-            Decode.field "duration" Decode.float
+        { videoId, range } =
+            attrs
+    in
+        div [ styles Styles.section ]
+            [ node "youtube-embed"
+                [ on "yt-api-ready" decodeApiReady
+                , on "video-meta" decodeVideoMeta
+                , attribute "video-id" videoId
+                , attribute "range" range
+                ]
+                []
+            ]
 
 
 subscriptions : Model -> Sub Msg
-subscriptions { apiReady, video, range } =
-    let
-        apiSub : Sub Msg
-        apiSub =
-            if (not apiReady) then
-                Ports.apiReady ApiReady
-            else
-                Sub.none
+subscriptions { slider } =
+    case slider of
+        Just slider_ ->
+            Sub.map SliderMsg <| Slider.subscriptions slider_
 
-        metaSub : Sub Msg
-        metaSub =
-            if apiReady then
-                Ports.videoMeta (decodeVideoMeta >> VideoMeta)
-            else
-                Sub.none
-
-        rangeSub : Sub Msg
-        rangeSub =
-            case ( video, range ) of
-                ( Just _, Just currentRange ) ->
-                    Sub.map SliderMsg <| Slider.subscriptions currentRange
-
-                _ ->
-                    Sub.none
-    in
-        Sub.batch
-            [ apiSub
-            , metaSub
-            , rangeSub
-            ]
+        _ ->
+            Sub.none
