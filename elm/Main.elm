@@ -218,24 +218,30 @@ formatRange slider duration =
 formatTime : Float -> String
 formatTime seconds =
     let
-        minutes : String
-        minutes =
-            seconds
-                |> round
-                |> flip (//) 60
-                |> toString
-                |> padLeft 2 '0'
-
-        seconds_ : String
+        seconds_ : Int
         seconds_ =
-            seconds
-                |> round
+            round seconds
+
+        hh : Int
+        hh =
+            seconds_ // 3600
+
+        mm : Int
+        mm =
+            seconds_
+                |> flip (%) 3600
+                |> flip (//) 60
+
+        ss : Int
+        ss =
+            seconds_
+                |> flip (%) 3600
                 |> flip (%) 60
-                |> toString
-                |> padLeft 2 '0'
     in
-        -- FIXME
-        minutes ++ ":" ++ seconds_
+        [ hh, mm, ss ]
+            |> List.map toString
+            |> List.map (padLeft 2 '0')
+            |> join ":"
 
 
 renderControls : Model -> Html Msg

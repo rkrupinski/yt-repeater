@@ -79,6 +79,7 @@ module.exports = {
     hot: true,
     open: true,
     inline: true,
+    port: 8001,
     publicPath: '/',
   },
 
