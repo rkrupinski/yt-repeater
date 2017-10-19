@@ -4,10 +4,9 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode
-import Json.Encode as Encode
 import Slider.Core as Slider
 import String exposing (..)
-import Slider.Helpers exposing (valueParser, valueFormatter, stepParser)
+import Slider.Helpers exposing (valueFormatter, stepParser)
 import Css exposing (asPairs)
 import Assets
 import Styles
@@ -134,23 +133,27 @@ update msg ({ videoId, videoDuration, slider, attrs } as model) =
                     model ! []
 
 
-encodeRange : Float -> Float -> Encode.Value
-encodeRange start end =
-    Encode.object
-        [ ( "start", Encode.float start )
-        , ( "end", Encode.float end )
+view : Model -> Html Msg
+view model =
+    div [ styles Styles.container ]
+        [ renderHeader
+        , renderForm model
+        , renderControls model
+        , renderPlayer model
+        , renderFooter
         ]
 
 
-view : Model -> Html Msg
-view model =
+renderHeader : Html never
+renderHeader =
     let
         logoUrl : String
         logoUrl =
             Assets.path Assets.logo
     in
-        div [ styles Styles.container ]
-            [ h1 [ styles Styles.heading ]
+        header []
+            [ h1
+                [ styles Styles.heading ]
                 [ img
                     [ src logoUrl
                     , alt "YouTube"
@@ -160,10 +163,6 @@ view model =
                 , text " "
                 , text "repeater"
                 ]
-            , renderForm model
-            , renderControls model
-            , renderPlayer model
-            , a [ href "https://github.com/rkrupinski/yt-repeater" ] [ text "View source" ]
             ]
 
 
@@ -194,54 +193,6 @@ renderForm { apiReady } =
             ]
     else
         p [] [ text "Loading..." ]
-
-
-formatRange : Slider.Model -> Float -> String
-formatRange slider duration =
-    let
-        values : Slider.Values
-        values =
-            Slider.getValues slider
-
-        formatValue : Float -> Float
-        formatValue =
-            valueFormatter ( 0, duration )
-
-        ( start, end ) =
-            values
-                |> Tuple.mapFirst formatValue
-                |> Tuple.mapSecond formatValue
-    in
-        (toString start) ++ "-" ++ (toString end)
-
-
-formatTime : Float -> String
-formatTime seconds =
-    let
-        seconds_ : Int
-        seconds_ =
-            round seconds
-
-        hh : Int
-        hh =
-            seconds_ // 3600
-
-        mm : Int
-        mm =
-            seconds_
-                |> flip (%) 3600
-                |> flip (//) 60
-
-        ss : Int
-        ss =
-            seconds_
-                |> flip (%) 3600
-                |> flip (%) 60
-    in
-        [ hh, mm, ss ]
-            |> List.map toString
-            |> List.map (padLeft 2 '0')
-            |> join ":"
 
 
 renderControls : Model -> Html Msg
@@ -299,6 +250,15 @@ renderPlayer { videoDuration, slider, attrs } =
             ]
 
 
+renderFooter : Html never
+renderFooter =
+    footer []
+        [ a
+            [ href "https://github.com/rkrupinski/yt-repeater" ]
+            [ text "View source" ]
+        ]
+
+
 subscriptions : Model -> Sub Msg
 subscriptions { slider } =
     case slider of
@@ -307,3 +267,51 @@ subscriptions { slider } =
 
         _ ->
             Sub.none
+
+
+formatRange : Slider.Model -> Float -> String
+formatRange slider duration =
+    let
+        values : Slider.Values
+        values =
+            Slider.getValues slider
+
+        formatValue : Float -> Float
+        formatValue =
+            valueFormatter ( 0, duration )
+
+        ( start, end ) =
+            values
+                |> Tuple.mapFirst formatValue
+                |> Tuple.mapSecond formatValue
+    in
+        (toString start) ++ "-" ++ (toString end)
+
+
+formatTime : Float -> String
+formatTime seconds =
+    let
+        seconds_ : Int
+        seconds_ =
+            round seconds
+
+        hh : Int
+        hh =
+            seconds_ // 3600
+
+        mm : Int
+        mm =
+            seconds_
+                |> flip (%) 3600
+                |> flip (//) 60
+
+        ss : Int
+        ss =
+            seconds_
+                |> flip (%) 3600
+                |> flip (%) 60
+    in
+        [ hh, mm, ss ]
+            |> List.map toString
+            |> List.map (padLeft 2 '0')
+            |> join ":"
