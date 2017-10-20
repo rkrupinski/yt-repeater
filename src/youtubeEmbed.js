@@ -21,73 +21,73 @@ export default function thunk() {
       });
     }
 
-    connectedCallback() {
-      const { playerDefer } = embedData.get(this);
-
+    async connectedCallback() {
+      const data = embedData.get(this);
       const shadow = this.attachShadow({ mode: 'closed' });
       const container = document.createElement('div');
 
-      playerDefer.promise.then(({ player, api }) => {
-        this.dispatchEvent(new CustomEvent('yt-api-ready', {
-          bubbles: true,
-        }));
-
-        player.addEventListener('onStateChange',
-            this._onStateChange.bind(this));
-      });
-
       shadow.appendChild(container);
 
-      init(container).then(playerDefer.resolve);
+      const  { player, api } = await init(container);
+
+      this._fire('yt-api-ready');
+
+      player.addEventListener('onStateChange',
+          this._onStateChange.bind(this));
+
+      data.playerDefer.resolve({ player, api });
     }
 
-    attributeChangedCallback(name, _, newValue) {
-      const { playerDefer } = embedData.get(this);
+    async attributeChangedCallback(name, _, newValue) {
+      const data = embedData.get(this);
+      const { player } = await data.playerDefer.promise;
 
-      playerDefer.promise.then(({ player, api }) => {
-        switch (name) {
-          case 'video-id':
-            if (newValue) {
-              embedData.get(this).video = null;
+      switch (name) {
+        case 'video-id':
+          if (newValue) {
+            data.video = null;
 
-              player.loadVideoById(newValue);
-            }
-            break;
+            player.loadVideoById(newValue);
+          }
+          break;
 
-          case 'range':
-            if (newValue) {
-              const [startSeconds, endSeconds] = newValue.split('-');
-              const { video_id: videoId } = player.getVideoData();
-              const video = { videoId, startSeconds, endSeconds };
+        case 'range':
+          if (newValue) {
+            const [startSeconds, endSeconds] = newValue.split('-');
+            const { video_id: videoId } = player.getVideoData();
+            const video = { videoId, startSeconds, endSeconds };
 
-              embedData.get(this).video = video;
+            data.video = video;
 
-              player.loadVideoById(video);
-            }
-            break;
-        }
-      });
-    }
-
-    _onStateChange({ data }) {
-      const { playerDefer , video } = embedData.get(this);
-
-      playerDefer.promise.then(({ player, api }) => {
-        switch (data) {
-          case api.PlayerState.PLAYING:
-            if (!video) {
-              this.dispatchEvent(new CustomEvent('video-meta', {
-                bubbles: true,
-                detail: player.getDuration(),
-              }));
-            }
-            break;
-
-          case api.PlayerState.ENDED:
             player.loadVideoById(video);
-            break;
-        }
-      });
+          }
+          break;
+      }
+    }
+
+    async _onStateChange({ data: playerState }) {
+      const data = embedData.get(this);
+      const { player, api } = await data.playerDefer.promise;
+
+      switch (playerState) {
+        case api.PlayerState.PLAYING:
+          if (!data.video) {
+            this._fire('video-meta', {
+              detail: player.getDuration(),
+            });
+          }
+          break;
+
+        case api.PlayerState.ENDED:
+          player.loadVideoById(data.video);
+          break;
+      }
+    }
+
+    _fire(evt, data) {
+      this.dispatchEvent(new CustomEvent(evt, Object.assign({
+        bubbles: true,
+      }, data)));
     }
   };
 }

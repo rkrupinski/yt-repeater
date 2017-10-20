@@ -167,30 +167,36 @@ renderHeader =
 
 
 renderForm : Model -> Html Msg
-renderForm { apiReady } =
+renderForm { apiReady, videoId } =
     if apiReady then
-        Html.form
-            [ onSubmit SubmitVideoId
-            , styles Styles.section
-            ]
-            [ label
-                [ for "videoId"
-                , styles Styles.formElement
+        let
+            fieldValue : String
+            fieldValue =
+                Maybe.withDefault "" videoId
+        in
+            Html.form
+                [ onSubmit SubmitVideoId
+                , styles Styles.section
                 ]
-                [ text "Video id:" ]
-            , input
-                [ id "videoId"
-                , name "videoId"
-                , onInput InputVideoId
-                , styles Styles.formElement
+                [ label
+                    [ for "videoId"
+                    , styles Styles.formElement
+                    ]
+                    [ text "Video id:" ]
+                , input
+                    [ id "videoId"
+                    , name "videoId"
+                    , value fieldValue
+                    , onInput InputVideoId
+                    , styles Styles.formElement
+                    ]
+                    []
+                , button
+                    [ styles Styles.formElement
+                    , type_ "submit"
+                    ]
+                    [ text "Load" ]
                 ]
-                []
-            , button
-                [ styles Styles.formElement
-                , type_ "submit"
-                ]
-                [ text "Load" ]
-            ]
     else
         p [] [ text "Loading..." ]
 

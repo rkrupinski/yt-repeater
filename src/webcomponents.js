@@ -8,6 +8,10 @@ function appendScript() {
 
 export default function polyfill() {
   return new Promise(function (resolve) {
+    if ('registerElement' in document) {
+      return resolve();
+    }
+
     window.addEventListener('WebComponentsReady', resolve);
 
     appendScript();
