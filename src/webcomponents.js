@@ -7,7 +7,7 @@ function appendScript() {
 }
 
 export default function polyfill() {
-  return new Promise(function (resolve) {
+  return new Promise((resolve) => { // eslint-disable-line consistent-return
     if ('registerElement' in document) {
       return resolve();
     }

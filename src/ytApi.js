@@ -10,9 +10,9 @@ export default function init(container, {
   width = 640,
   height = 480,
 } = {}) {
-  return new Promise(function (resolve, reject) {
-    window.onYouTubeIframeAPIReady = function () {
-      new YT.Player(container, {
+  return new Promise((resolve, reject) => {
+    window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
+      return new YT.Player(container, {
         width,
         height,
         playerVars: {
@@ -20,13 +20,13 @@ export default function init(container, {
           controls: 1,
         },
         events: {
-          onReady: function (e) {
+          onReady(e) {
             resolve({
               player: e.target,
               api: window.YT,
             });
           },
-          onError: function (e) {
+          onError(e) {
             reject(e.data);
           },
         },

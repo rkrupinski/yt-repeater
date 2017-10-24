@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "YouTube repeater",
   "repository": "git@github.com:rkrupinski/yt-repeater.git",
-  "license": "BSD3",
+  "license": "BSD-3-Clause",
   "scripts": {
     "start": "webpack-dev-server",
     "build": "webpack"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",
+    "babel-eslint": "^8.0.1",
     "babel-minify-webpack-plugin": "^0.2.0",
     "clean-webpack-plugin": "^0.1.17",
     "css-loader": "^0.28.7",
@@ -17,11 +18,17 @@
     "elm-css-webpack-loader": "^3.3.0",
     "elm-hot-loader": "^0.5.4",
     "elm-webpack-loader": "^4.3.1",
+    "eslint": "^4.9.0",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-loader": "^1.9.0",
+    "eslint-plugin-import": "^2.8.0",
     "file-loader": "^0.11.2",
     "html-webpack-plugin": "^2.30.1",
     "style-loader": "^0.19.0",
     "webpack": "^3.6.0",
     "webpack-dev-server": "^2.7.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "lodash.debounce": "^4.0.8"
+  }
 }
