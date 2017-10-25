@@ -57,19 +57,32 @@ module.exports = {
         ],
       },
       {
-        test: /\.(jpe?g|png|gif|svg)$/i,
-        loader: 'file-loader',
-        options: {
-          name: '[name]-[hash:8].[ext]',
-        },
-      },
-      {
         test: /Stylesheets\.elm$/,
         use: [
           'style-loader',
           'css-loader',
           'elm-css-webpack-loader',
         ],
+      },
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        enforce: 'pre',
+        use: [
+          {
+            loader: 'eslint-loader',
+            options: {
+              failOnError: true,
+            },
+          },
+        ],
+      },
+      {
+        test: /\.(jpe?g|png|gif|svg)$/i,
+        loader: 'file-loader',
+        options: {
+          name: '[name]-[hash:8].[ext]',
+        },
       },
     ],
   },

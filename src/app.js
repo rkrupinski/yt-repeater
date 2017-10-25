@@ -4,7 +4,7 @@ import thunk from 'youtubeEmbed';
 import { Main } from 'Main';
 
 polyfill()
-  .then(function () {
+  .then(() => {
     customElements.define('youtube-embed', thunk());
 
     Main.fullscreen();
