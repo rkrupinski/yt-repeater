@@ -99,7 +99,7 @@ update msg ({ videoId, videoDuration, slider, queryParams, attrs } as model) =
                         |> QS.add "v" (defaultToEmpty videoId)
                         |> QS.render
             in
-                model ! [ Navigation.modifyUrl <| Debug.log "new url" newUrl ]
+                model ! [ Navigation.modifyUrl newUrl ]
 
         VideoMeta duration ->
             let
