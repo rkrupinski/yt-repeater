@@ -15,19 +15,18 @@ import Assets
 import Styles
 
 
-styles : List Css.Style -> Attribute msg
-styles =
-    asPairs >> Html.Attributes.style
-
-
 type Msg
     = YTApiReady
     | InputVideoId String
     | SubmitVideoId
-    | VideoMeta Float
+    | VideoMeta Duration
     | SliderMsg Slider.Msg
     | ApplyRange
     | UrlChange Navigation.Location
+
+
+type alias Duration =
+    Int
 
 
 type alias QueryParams =
@@ -39,14 +38,19 @@ type alias QueryParams =
 
 type alias Attrs =
     { v : String
-    , start : Edge
-    , end : Edge
+    , start : String
+    , end : String
     }
 
 
-type Edge
-    = Unknown
-    | Known Int
+type alias Model =
+    { apiReady : Bool
+    , videoId : Maybe String
+    , videoDuration : Maybe Duration
+    , slider : Maybe Slider.Model
+    , queryParams : QueryParams
+    , attrs : Attrs
+    }
 
 
 main : Program Never Model Msg
@@ -59,60 +63,6 @@ main =
         }
 
 
-type alias Model =
-    { apiReady : Bool
-    , videoId : Maybe String
-    , videoDuration : Maybe Float
-    , slider : Maybe Slider.Model
-    , queryParams : QueryParams
-    , attrs : Attrs
-    }
-
-
-defaultSliderConfig : Slider.Config
-defaultSliderConfig =
-    { size = Just 400
-    , values = Nothing
-    , step = Nothing
-    }
-
-
-defaultToEmpty : Maybe String -> String
-defaultToEmpty =
-    Maybe.withDefault ""
-
-
-toEdge : Maybe Int -> Edge
-toEdge edge =
-    edge |> Maybe.map Known >> Maybe.withDefault Unknown
-
-
-fromEdge : Int -> Edge -> Int
-fromEdge default edge =
-    case edge of
-        Known num ->
-            num
-
-        Unknown ->
-            default
-
-
-buildAttrs : QueryParams -> Attrs
-buildAttrs { v, start, end } =
-    let
-        v_ : String
-        v_ =
-            defaultToEmpty v
-    in
-        if String.length v_ > 0 then
-            Attrs
-                v_
-                (toEdge start)
-                (toEdge end)
-        else
-            Attrs "" Unknown Unknown
-
-
 init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
     let
@@ -121,7 +71,7 @@ init location =
 
         attrs : Attrs
         attrs =
-            Debug.log "attrs" (buildAttrs queryParams)
+            buildAttrs queryParams
     in
         Model False v Nothing Nothing queryParams attrs ! []
 
@@ -143,45 +93,42 @@ update msg ({ videoId, videoDuration, slider, queryParams, attrs } as model) =
 
         SubmitVideoId ->
             let
-                videoId_ : String
-                videoId_ =
-                    defaultToEmpty videoId
-
                 newUrl : String
                 newUrl =
                     QS.empty
-                        |> QS.add "v" videoId_
+                        |> QS.add "v" (defaultToEmpty videoId)
                         |> QS.render
             in
-                { model
-                    | attrs = Attrs "" Unknown Unknown
-                }
-                    ! [ Navigation.modifyUrl newUrl ]
+                model ! [ Navigation.modifyUrl <| Debug.log "new url" newUrl ]
 
         VideoMeta duration ->
             let
-                { start, end } =
+                { v, start, end } =
                     queryParams
 
-                duration_ : Int
-                duration_ =
-                    round duration
+                range : Slider.Range
+                range =
+                    ( 0, toFloat duration )
 
                 parseValue : Float -> Float
                 parseValue =
-                    valueParser ( 0, duration )
+                    valueParser range
 
-                initialRange : Slider.Range
-                initialRange =
-                    ( Maybe.withDefault 0 start |> toFloat |> parseValue
-                    , Maybe.withDefault duration_ end |> toFloat |> parseValue
+                initialValues : Slider.Range
+                initialValues =
+                    ( Maybe.withDefault 0 start
+                        |> toFloat
+                        |> parseValue
+                    , Maybe.withDefault duration end
+                        |> toFloat
+                        |> parseValue
                     )
 
                 sliderConfig : Slider.Config
                 sliderConfig =
                     { defaultSliderConfig
-                        | step = Just <| stepParser ( 0, duration ) 1
-                        , values = Just initialRange
+                        | step = Just <| stepParser range 1
+                        , values = Just initialValues
                     }
 
                 slider : Slider.Model
@@ -210,12 +157,15 @@ update msg ({ videoId, videoDuration, slider, queryParams, attrs } as model) =
                     model ! []
 
         ApplyRange ->
-            case ( slider, videoId, videoDuration ) of
-                ( Just slider_, Just videoId_, Just duration ) ->
+            case ( slider, videoDuration ) of
+                ( Just slider_, Just duration ) ->
                     let
+                        { v } =
+                            queryParams
+
                         formatValue : Float -> String
                         formatValue =
-                            valueFormatter ( 0, duration )
+                            valueFormatter ( 0, toFloat duration )
                                 >> round
                                 >> toString
 
@@ -225,7 +175,7 @@ update msg ({ videoId, videoDuration, slider, queryParams, attrs } as model) =
                         newUrl : String
                         newUrl =
                             QS.empty
-                                |> QS.add "v" videoId_
+                                |> QS.add "v" (defaultToEmpty v)
                                 |> QS.add "start" (formatValue start)
                                 |> QS.add "end" (formatValue end)
                                 |> QS.render
@@ -239,12 +189,10 @@ update msg ({ videoId, videoDuration, slider, queryParams, attrs } as model) =
             let
                 ({ v } as queryParams) =
                     extractQueryParams location
-
-                f =
-                    Debug.log "queryParams" queryParams
             in
                 { model
                     | videoId = v
+                    , queryParams = queryParams
                     , attrs = buildAttrs queryParams
                 }
                     ! []
@@ -286,34 +234,29 @@ renderHeader =
 renderForm : Model -> Html Msg
 renderForm { apiReady, videoId } =
     if apiReady then
-        let
-            fieldValue : String
-            fieldValue =
-                Maybe.withDefault "" videoId
-        in
-            Html.form
-                [ onSubmit SubmitVideoId
-                , styles Styles.section
+        Html.form
+            [ onSubmit SubmitVideoId
+            , styles Styles.section
+            ]
+            [ label
+                [ for "videoId"
+                , styles Styles.formElement
                 ]
-                [ label
-                    [ for "videoId"
-                    , styles Styles.formElement
-                    ]
-                    [ text "Video id:" ]
-                , input
-                    [ id "videoId"
-                    , name "videoId"
-                    , value fieldValue
-                    , onInput InputVideoId
-                    , styles Styles.formElement
-                    ]
-                    []
-                , button
-                    [ styles Styles.formElement
-                    , type_ "submit"
-                    ]
-                    [ text "Load" ]
+                [ text "Video id:" ]
+            , input
+                [ id "videoId"
+                , name "videoId"
+                , value <| defaultToEmpty videoId
+                , onInput InputVideoId
+                , styles Styles.formElement
                 ]
+                []
+            , button
+                [ styles Styles.formElement
+                , type_ "submit"
+                ]
+                [ text "Load" ]
+            ]
     else
         p [] [ text "Loading..." ]
 
@@ -328,7 +271,7 @@ renderControls { videoDuration, slider } =
 
                 formatValue : Float -> Float
                 formatValue =
-                    valueFormatter ( 0, duration )
+                    valueFormatter ( 0, toFloat duration )
             in
                 div [ styles Styles.section ]
                     [ Html.map SliderMsg <| Slider.view slider_
@@ -357,7 +300,7 @@ renderPlayer { videoDuration, slider, attrs } =
 
         decodeVideoMeta : Decode.Decoder Msg
         decodeVideoMeta =
-            Decode.map VideoMeta <| Decode.field "detail" Decode.float
+            Decode.map VideoMeta <| Decode.field "detail" Decode.int
 
         { v, start, end } =
             attrs
@@ -366,8 +309,8 @@ renderPlayer { videoDuration, slider, attrs } =
         extraAttrs =
             case videoDuration of
                 Just duration ->
-                    [ attribute "start" <| toString <| fromEdge 0 start
-                    , attribute "end" <| toString <| fromEdge (round duration) end
+                    [ attribute "start" start
+                    , attribute "end" end
                     ]
 
                 _ ->
@@ -402,6 +345,32 @@ subscriptions { slider } =
 
         _ ->
             Sub.none
+
+
+defaultSliderConfig : Slider.Config
+defaultSliderConfig =
+    { size = Just 400
+    , values = Nothing
+    , step = Nothing
+    }
+
+
+styles : List Css.Style -> Attribute msg
+styles =
+    asPairs >> Html.Attributes.style
+
+
+defaultToEmpty : Maybe String -> String
+defaultToEmpty =
+    Maybe.withDefault ""
+
+
+buildAttrs : QueryParams -> Attrs
+buildAttrs { v, start, end } =
+    Attrs
+        (defaultToEmpty v)
+        (start |> Maybe.map toString |> defaultToEmpty)
+        (end |> Maybe.map toString |> defaultToEmpty)
 
 
 formatTime : Float -> String

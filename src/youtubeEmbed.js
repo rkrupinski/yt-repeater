@@ -93,7 +93,7 @@ export default function thunk() {
             data.metaSent = true;
 
             this.fire('video-meta', {
-              detail: player.getDuration(),
+              detail: Math.round(player.getDuration()),
             });
           }
           break;
