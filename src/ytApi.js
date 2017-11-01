@@ -7,8 +7,8 @@ function appendScript() {
 }
 
 export default function init(container, {
-  width = 640,
-  height = 480,
+  width = 560,
+  height = 315,
 } = {}) {
   return new Promise((resolve, reject) => {
     window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
