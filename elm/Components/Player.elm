@@ -1,4 +1,4 @@
-module Components.Player exposing (view, init, update, getApiReady, Msg(SetParams), Model)
+module Components.Player exposing (view, init, update, getApiReady, getVideoDuration, Msg(SetParams), Model)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)

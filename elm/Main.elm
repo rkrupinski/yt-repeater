@@ -1,19 +1,18 @@
 module Main exposing (..)
 
 import Html exposing (..)
-import Html.Attributes exposing (..)
 import UrlParser as Url exposing ((<?>), parsePath, stringParam, intParam, top)
 import Navigation
-import Styles
 import Layout.Header as Header
 import Layout.Footer as Footer
 import Components.Form as Form
+import Components.Controls as Controls
 import Components.Player as Player
-import Utils exposing (styles)
 
 
 type Msg
     = FormMsg Form.Msg
+    | ControlsMsg Controls.Msg
     | PlayerMsg Player.Msg
     | UrlChange Navigation.Location
 
@@ -27,6 +26,7 @@ type alias QueryParams =
 
 type alias Model =
     { videoForm : Maybe Form.Model
+    , videoControls : Maybe Controls.Model
     , player : Player.Model
     , queryParams : QueryParams
     }
@@ -40,6 +40,7 @@ init location =
             extractQueryParams location
     in
         Model
+            Nothing
             Nothing
             (Player.init queryParams)
             queryParams
@@ -57,7 +58,7 @@ main =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ videoForm, player, queryParams } as model) =
+update msg ({ videoForm, videoControls, player, queryParams } as model) =
     case msg of
         FormMsg formMsg ->
             case videoForm of
@@ -73,6 +74,10 @@ update msg ({ videoForm, player, queryParams } as model) =
 
                 _ ->
                     model ! []
+
+        ControlsMsg controlsMsg ->
+            -- TODO
+            model ! []
 
         PlayerMsg playerMsg ->
             let
@@ -95,9 +100,19 @@ update msg ({ videoForm, player, queryParams } as model) =
 
                         _ ->
                             videoForm
+
+                videoControls_ : Maybe Controls.Model
+                videoControls_ =
+                    case (Player.getVideoDuration player_) of
+                        Just duration ->
+                            Controls.init |> Just
+
+                        _ ->
+                            videoControls
             in
                 { model
                     | videoForm = videoForm_
+                    , videoControls = videoControls_
                     , player = player_
                 }
                     ! [ Cmd.map PlayerMsg cmd ]
@@ -119,7 +134,7 @@ update msg ({ videoForm, player, queryParams } as model) =
 
 
 view : Model -> Html Msg
-view ({ videoForm, player } as model) =
+view ({ videoForm, videoControls, player } as model) =
     let
         renderForm : Html Msg
         renderForm =
@@ -129,10 +144,20 @@ view ({ videoForm, player } as model) =
 
                 _ ->
                     p [] [ text "Loading..." ]
+
+        renderControls : Html Msg
+        renderControls =
+            case videoControls of
+                Just videoControls_ ->
+                    Html.map ControlsMsg <| Controls.view videoControls_
+
+                _ ->
+                    text ""
     in
-        div [ styles Styles.container ]
+        div []
             [ Header.view
             , renderForm
+            , renderControls
             , Html.map PlayerMsg <| Player.view player
             , Footer.view
             ]
