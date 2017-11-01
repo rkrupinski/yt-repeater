@@ -74,16 +74,26 @@ update msg ({ videoForm, videoControls, player, router } as model) =
                     model ! []
 
         ControlsMsg controlsMsg ->
-            -- TODO
-            model ! []
+            case videoControls of
+                Just videoControls_ ->
+                    let
+                        ( newControls, cmd ) =
+                            Controls.update controlsMsg videoControls_
+                    in
+                        { model
+                            | videoControls = Just newControls
+                        }
+                            ! [ Cmd.map ControlsMsg cmd ]
+
+                _ ->
+                    model ! []
 
         PlayerMsg playerMsg ->
             let
                 ( player_, cmd ) =
                     Player.update playerMsg player
 
-                params : Router.Params
-                params =
+                ({ v } as params) =
                     Router.getParams router
 
                 videoForm_ : Maybe Form.Model
@@ -94,7 +104,7 @@ update msg ({ videoForm, videoControls, player, router } as model) =
                         )
                     of
                         ( False, True ) ->
-                            Form.init params.v |> Just
+                            Form.init v |> Just
 
                         _ ->
                             videoForm
@@ -103,7 +113,7 @@ update msg ({ videoForm, videoControls, player, router } as model) =
                 videoControls_ =
                     case (Player.getVideoDuration player_) of
                         Just duration ->
-                            Controls.init params |> Just
+                            Controls.init duration params |> Just
 
                         _ ->
                             videoControls
@@ -170,5 +180,10 @@ view ({ videoForm, videoControls, player } as model) =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
+subscriptions { videoControls } =
+    case videoControls of
+        Just videoControls_ ->
+            Sub.map ControlsMsg <| Controls.subscriptions videoControls_
+
+        _ ->
+            Sub.none
