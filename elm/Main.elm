@@ -4,11 +4,12 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import UrlParser as Url exposing ((<?>), parsePath, stringParam, intParam, top)
 import Navigation
-import Assets
 import Styles
-import Form
-import Player
-import Utils exposing (styles, defaultToEmpty)
+import Layout.Header as Header
+import Layout.Footer as Footer
+import Components.Form as Form
+import Components.Player as Player
+import Utils exposing (styles)
 
 
 type Msg
@@ -128,49 +129,13 @@ view ({ videoForm, player } as model) =
 
                 _ ->
                     p [] [ text "Loading..." ]
-
-        renderPlayer : Html Msg
-        renderPlayer =
-            Html.map PlayerMsg <| Player.view player
     in
         div [ styles Styles.container ]
-            [ renderHeader
+            [ Header.view
             , renderForm
-              -- , renderControls model
-            , renderPlayer
-            , renderFooter
+            , Html.map PlayerMsg <| Player.view player
+            , Footer.view
             ]
-
-
-renderHeader : Html never
-renderHeader =
-    let
-        logoUrl : String
-        logoUrl =
-            Assets.path Assets.logo
-    in
-        header []
-            [ h1
-                [ styles Styles.heading ]
-                [ img
-                    [ src logoUrl
-                    , alt "YouTube"
-                    , styles Styles.logo
-                    ]
-                    []
-                , text " "
-                , text "repeater"
-                ]
-            ]
-
-
-renderFooter : Html never
-renderFooter =
-    footer []
-        [ a
-            [ href "https://github.com/rkrupinski/yt-repeater" ]
-            [ text "View source" ]
-        ]
 
 
 subscriptions : Model -> Sub Msg

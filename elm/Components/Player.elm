@@ -1,4 +1,4 @@
-module Player exposing (view, init, update, getApiReady, Msg(SetParams), Model)
+module Components.Player exposing (view, init, update, getApiReady, Msg(SetParams), Model)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -53,27 +53,23 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg (Model model) =
     case msg of
         YTApiReady ->
-            Model
-                { model
-                    | apiReady = True
-                }
-                ! []
+            Model { model | apiReady = True } ! []
 
-        -- TODO
         VideoMeta duration ->
-            Model model ! []
+            Model { model | videoDuration = Just duration } ! []
 
         SetParams params ->
-            Model
-                { model
-                    | attrs = buildAttrs params
-                }
-                ! []
+            Model { model | attrs = buildAttrs params } ! []
 
 
 getApiReady : Model -> Bool
 getApiReady (Model { apiReady }) =
     apiReady
+
+
+getVideoDuration : Model -> Maybe Duration
+getVideoDuration (Model { videoDuration }) =
+    videoDuration
 
 
 view : Model -> Html Msg

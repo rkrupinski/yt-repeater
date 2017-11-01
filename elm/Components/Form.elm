@@ -1,4 +1,4 @@
-module Form exposing (view, init, update, Model, Msg)
+module Components.Form exposing (view, init, update, Model, Msg)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
