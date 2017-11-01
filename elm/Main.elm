@@ -1,8 +1,8 @@
 module Main exposing (..)
 
 import Html exposing (..)
-import UrlParser as Url exposing ((<?>), parsePath, stringParam, intParam, top)
 import Navigation
+import Router
 import Layout.Header as Header
 import Layout.Footer as Footer
 import Components.Form as Form
@@ -14,36 +14,34 @@ type Msg
     = FormMsg Form.Msg
     | ControlsMsg Controls.Msg
     | PlayerMsg Player.Msg
+    | RouterMsg Router.Msg
     | UrlChange Navigation.Location
-
-
-type alias QueryParams =
-    { v : Maybe String
-    , start : Maybe Int
-    , end : Maybe Int
-    }
 
 
 type alias Model =
     { videoForm : Maybe Form.Model
     , videoControls : Maybe Controls.Model
     , player : Player.Model
-    , queryParams : QueryParams
+    , router : Router.Model
     }
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
     let
-        queryParams : QueryParams
-        queryParams =
-            extractQueryParams location
+        router : Router.Model
+        router =
+            Router.init location
+
+        params : Router.Params
+        params =
+            Router.getParams router
     in
         Model
             Nothing
             Nothing
-            (Player.init queryParams)
-            queryParams
+            (Player.init params)
+            router
             ! []
 
 
@@ -58,7 +56,7 @@ main =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ videoForm, videoControls, player, queryParams } as model) =
+update msg ({ videoForm, videoControls, player, router } as model) =
     case msg of
         FormMsg formMsg ->
             case videoForm of
@@ -84,6 +82,10 @@ update msg ({ videoForm, videoControls, player, queryParams } as model) =
                 ( player_, cmd ) =
                     Player.update playerMsg player
 
+                params : Router.Params
+                params =
+                    Router.getParams router
+
                 videoForm_ : Maybe Form.Model
                 videoForm_ =
                     case
@@ -92,11 +94,7 @@ update msg ({ videoForm, videoControls, player, queryParams } as model) =
                         )
                     of
                         ( False, True ) ->
-                            let
-                                { v } =
-                                    queryParams
-                            in
-                                Form.init v |> Just
+                            Form.init params.v |> Just
 
                         _ ->
                             videoForm
@@ -105,7 +103,7 @@ update msg ({ videoForm, videoControls, player, queryParams } as model) =
                 videoControls_ =
                     case (Player.getVideoDuration player_) of
                         Just duration ->
-                            Controls.init |> Just
+                            Controls.init params |> Just
 
                         _ ->
                             videoControls
@@ -117,20 +115,28 @@ update msg ({ videoForm, videoControls, player, queryParams } as model) =
                 }
                     ! [ Cmd.map PlayerMsg cmd ]
 
+        RouterMsg _ ->
+            model ! []
+
         UrlChange location ->
             let
-                queryParams : QueryParams
-                queryParams =
-                    extractQueryParams location
+                ( router_, routerCmd ) =
+                    Router.update (Router.UrlChange location) router
 
-                ( player_, cmd ) =
-                    Player.update (Player.SetParams queryParams) player
+                params : Router.Params
+                params =
+                    Router.getParams router_
+
+                ( player_, playerCmd ) =
+                    Player.update (Player.SetParams params) player
             in
                 { model
                     | player = player_
-                    , queryParams = queryParams
+                    , router = router_
                 }
-                    ! [ Cmd.map PlayerMsg cmd ]
+                    ! [ Cmd.map PlayerMsg playerCmd
+                      , Cmd.map RouterMsg routerCmd
+                      ]
 
 
 view : Model -> Html Msg
@@ -143,7 +149,7 @@ view ({ videoForm, videoControls, player } as model) =
                     Html.map FormMsg <| Form.view videoForm_
 
                 _ ->
-                    p [] [ text "Loading..." ]
+                    text ""
 
         renderControls : Html Msg
         renderControls =
@@ -166,22 +172,3 @@ view ({ videoForm, videoControls, player } as model) =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
-
-
-parseQueryString : Navigation.Location -> Maybe QueryParams
-parseQueryString location =
-    let
-        queryParser =
-            top <?> stringParam "v" <?> intParam "start" <?> intParam "end"
-    in
-        parsePath (Url.map QueryParams queryParser) location
-
-
-extractQueryParams : Navigation.Location -> QueryParams
-extractQueryParams location =
-    let
-        defaultParams : QueryParams
-        defaultParams =
-            QueryParams Nothing Nothing Nothing
-    in
-        Maybe.withDefault defaultParams <| parseQueryString location

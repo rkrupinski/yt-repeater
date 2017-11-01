@@ -10,7 +10,7 @@ heading : List Style
 heading =
     [ margin3 zero zero <| em 2
     , fontSize <| em 1
-    , lineHeight <| em 1
+    , lineHeight <| int 1
     , fontWeight normal
     ]
 

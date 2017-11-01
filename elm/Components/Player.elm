@@ -5,13 +5,14 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode
 import Utils exposing (styles, defaultToEmpty)
+import Router
 import Styles
 
 
 type Msg
     = YTApiReady
     | VideoMeta Duration
-    | SetParams Params
+    | SetParams Router.Params
 
 
 type alias Duration =
@@ -25,13 +26,6 @@ type alias Attrs =
     }
 
 
-type alias Params =
-    { v : Maybe String
-    , start : Maybe Int
-    , end : Maybe Int
-    }
-
-
 type Model
     = Model
         { apiReady : Bool
@@ -40,7 +34,7 @@ type Model
         }
 
 
-init : Params -> Model
+init : Router.Params -> Model
 init params =
     Model
         { apiReady = False
@@ -100,7 +94,7 @@ decodeVideoMeta =
     Decode.map VideoMeta <| Decode.field "detail" Decode.int
 
 
-buildAttrs : Params -> Attrs
+buildAttrs : Router.Params -> Attrs
 buildAttrs { v, start, end } =
     Attrs
         (defaultToEmpty v)

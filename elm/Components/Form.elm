@@ -10,7 +10,7 @@ import Styles
 
 
 type Msg
-    = InputVideoId String
+    = InputVideoId VideoId
     | SubmitVideoId
 
 
