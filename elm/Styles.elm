@@ -6,9 +6,18 @@ import Css.Namespace exposing (namespace)
 import Slider.ClassNames exposing (..)
 
 
+container : List Style
+container =
+    [ margin <| em 1
+    , fontFamily sansSerif
+    ]
+
+
 heading : List Style
 heading =
-    [ margin3 zero zero <| em 2
+    [ margin3 zero zero <| em 1
+    , paddingBottom <| em 1
+    , borderBottom3 (px 1) solid gray
     , fontSize <| em 1
     , lineHeight <| int 1
     , fontWeight normal

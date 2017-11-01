@@ -5,7 +5,7 @@ import Html.Events exposing (..)
 import QueryString as QS
 import Navigation
 import Slider.Core as Slider
-import Slider.Helpers exposing (valueParser, valueFormatter, stepParser)
+import Slider.Helpers exposing (..)
 import Utils exposing (styles, defaultToEmpty, formatTime)
 import Router
 import Styles

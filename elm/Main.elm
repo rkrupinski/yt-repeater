@@ -8,6 +8,8 @@ import Layout.Footer as Footer
 import Components.Form as Form
 import Components.Controls as Controls
 import Components.Player as Player
+import Utils exposing (styles)
+import Styles
 
 
 type Msg
@@ -170,7 +172,7 @@ view ({ videoForm, videoControls, player } as model) =
                 _ ->
                     text ""
     in
-        div []
+        div [ styles Styles.container ]
             [ Header.view
             , renderForm
             , renderControls
