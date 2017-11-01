@@ -2,31 +2,19 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (..)
-import String exposing (padLeft, join)
-import Json.Decode as Decode
 import UrlParser as Url exposing ((<?>), parsePath, stringParam, intParam, top)
 import Navigation
-import QueryString as QS
-import Slider.Core as Slider
-import Slider.Helpers exposing (valueFormatter, valueParser, stepParser)
 import Assets
 import Styles
 import Form
+import Player
 import Utils exposing (styles, defaultToEmpty)
 
 
 type Msg
-    = YTApiReady
-    | FormMsg Form.Msg
-    | VideoMeta Duration
-    | SliderMsg Slider.Msg
-    | ApplyRange
+    = FormMsg Form.Msg
+    | PlayerMsg Player.Msg
     | UrlChange Navigation.Location
-
-
-type alias Duration =
-    Int
 
 
 type alias QueryParams =
@@ -36,40 +24,24 @@ type alias QueryParams =
     }
 
 
-type alias Attrs =
-    { v : String
-    , start : String
-    , end : String
-    }
-
-
 type alias Model =
-    { apiReady : Bool
-    , videoDuration : Maybe Duration
-    , videoForm : Maybe Form.Model
-    , slider : Maybe Slider.Model
+    { videoForm : Maybe Form.Model
+    , player : Player.Model
     , queryParams : QueryParams
-    , attrs : Attrs
     }
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
     let
-        ({ v } as queryParams) =
+        queryParams : QueryParams
+        queryParams =
             extractQueryParams location
-
-        attrs : Attrs
-        attrs =
-            buildAttrs queryParams
     in
         Model
-            False
             Nothing
-            Nothing
-            Nothing
+            (Player.init queryParams)
             queryParams
-            attrs
             ! []
 
 
@@ -84,19 +56,8 @@ main =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ videoDuration, videoForm, slider, queryParams, attrs } as model) =
+update msg ({ videoForm, player, queryParams } as model) =
     case msg of
-        YTApiReady ->
-            let
-                { v } =
-                    queryParams
-            in
-                { model
-                    | apiReady = True
-                    , videoForm = Form.init v |> Just
-                }
-                    ! []
-
         FormMsg formMsg ->
             case videoForm of
                 Just videoForm_ ->
@@ -112,105 +73,52 @@ update msg ({ videoDuration, videoForm, slider, queryParams, attrs } as model) =
                 _ ->
                     model ! []
 
-        VideoMeta duration ->
+        PlayerMsg playerMsg ->
             let
-                { v, start, end } =
-                    queryParams
+                ( player_, cmd ) =
+                    Player.update playerMsg player
 
-                range : Slider.Range
-                range =
-                    ( 0, toFloat duration )
+                videoForm_ : Maybe Form.Model
+                videoForm_ =
+                    case
+                        ( Player.getApiReady player
+                        , Player.getApiReady player_
+                        )
+                    of
+                        ( False, True ) ->
+                            let
+                                { v } =
+                                    queryParams
+                            in
+                                Form.init v |> Just
 
-                parseValue : Float -> Float
-                parseValue =
-                    valueParser range
-
-                initialValues : Slider.Range
-                initialValues =
-                    ( Maybe.withDefault 0 start
-                        |> toFloat
-                        |> parseValue
-                    , Maybe.withDefault duration end
-                        |> toFloat
-                        |> parseValue
-                    )
-
-                sliderConfig : Slider.Config
-                sliderConfig =
-                    { defaultSliderConfig
-                        | step = Just <| stepParser range 1
-                        , values = Just initialValues
-                    }
-
-                slider : Slider.Model
-                slider =
-                    Slider.init sliderConfig
+                        _ ->
+                            videoForm
             in
                 { model
-                    | videoDuration = Just duration
-                    , slider = Just slider
+                    | videoForm = videoForm_
+                    , player = player_
                 }
-                    ! []
-
-        SliderMsg sliderMsg ->
-            case slider of
-                Just slider_ ->
-                    let
-                        ( newSlider, cmd ) =
-                            Slider.update sliderMsg slider_
-                    in
-                        { model
-                            | slider = Just newSlider
-                        }
-                            ! [ Cmd.map SliderMsg cmd ]
-
-                _ ->
-                    model ! []
-
-        ApplyRange ->
-            case ( slider, videoDuration ) of
-                ( Just slider_, Just duration ) ->
-                    let
-                        { v } =
-                            queryParams
-
-                        formatValue : Float -> String
-                        formatValue =
-                            valueFormatter ( 0, toFloat duration )
-                                >> round
-                                >> toString
-
-                        ( start, end ) =
-                            Slider.getValues slider_
-
-                        newUrl : String
-                        newUrl =
-                            QS.empty
-                                |> QS.add "v" (defaultToEmpty v)
-                                |> QS.add "start" (formatValue start)
-                                |> QS.add "end" (formatValue end)
-                                |> QS.render
-                    in
-                        model ! [ Navigation.modifyUrl newUrl ]
-
-                _ ->
-                    model ! []
+                    ! [ Cmd.map PlayerMsg cmd ]
 
         UrlChange location ->
             let
                 queryParams : QueryParams
                 queryParams =
                     extractQueryParams location
+
+                ( player_, cmd ) =
+                    Player.update (Player.SetParams queryParams) player
             in
                 { model
-                    | queryParams = queryParams
-                    , attrs = buildAttrs queryParams
+                    | player = player_
+                    , queryParams = queryParams
                 }
-                    ! []
+                    ! [ Cmd.map PlayerMsg cmd ]
 
 
 view : Model -> Html Msg
-view ({ videoForm } as model) =
+view ({ videoForm, player } as model) =
     let
         renderForm : Html Msg
         renderForm =
@@ -220,12 +128,16 @@ view ({ videoForm } as model) =
 
                 _ ->
                     p [] [ text "Loading..." ]
+
+        renderPlayer : Html Msg
+        renderPlayer =
+            Html.map PlayerMsg <| Player.view player
     in
         div [ styles Styles.container ]
             [ renderHeader
             , renderForm
-            , renderControls model
-            , renderPlayer model
+              -- , renderControls model
+            , renderPlayer
             , renderFooter
             ]
 
@@ -252,73 +164,6 @@ renderHeader =
             ]
 
 
-renderControls : Model -> Html Msg
-renderControls { videoDuration, slider } =
-    case ( videoDuration, slider ) of
-        ( Just duration, Just slider_ ) ->
-            let
-                ( start, end ) =
-                    Slider.getValues slider_
-
-                formatValue : Float -> Float
-                formatValue =
-                    valueFormatter ( 0, toFloat duration )
-            in
-                div [ styles Styles.section ]
-                    [ Html.map SliderMsg <| Slider.view slider_
-                    , p []
-                        [ text <| formatTime <| formatValue start
-                        , text " - "
-                        , text <| formatTime <| formatValue end
-                        ]
-                    , button
-                        [ onClick ApplyRange
-                        , styles Styles.formElement
-                        ]
-                        [ text "Apply range" ]
-                    ]
-
-        _ ->
-            text ""
-
-
-renderPlayer : Model -> Html Msg
-renderPlayer { videoDuration, slider, attrs } =
-    let
-        decodeApiReady : Decode.Decoder Msg
-        decodeApiReady =
-            Decode.succeed YTApiReady
-
-        decodeVideoMeta : Decode.Decoder Msg
-        decodeVideoMeta =
-            Decode.map VideoMeta <| Decode.field "detail" Decode.int
-
-        { v, start, end } =
-            attrs
-
-        extraAttrs : List (Attribute Msg)
-        extraAttrs =
-            case videoDuration of
-                Just duration ->
-                    [ attribute "start" start
-                    , attribute "end" end
-                    ]
-
-                _ ->
-                    []
-    in
-        div [ styles Styles.section ]
-            [ node "youtube-embed"
-                ([ on "yt-api-ready" decodeApiReady
-                 , on "video-meta" decodeVideoMeta
-                 , attribute "v" v
-                 ]
-                    ++ extraAttrs
-                )
-                []
-            ]
-
-
 renderFooter : Html never
 renderFooter =
     footer []
@@ -329,58 +174,8 @@ renderFooter =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions { slider } =
-    case slider of
-        Just slider_ ->
-            Sub.map SliderMsg <| Slider.subscriptions slider_
-
-        _ ->
-            Sub.none
-
-
-defaultSliderConfig : Slider.Config
-defaultSliderConfig =
-    { size = Just 400
-    , values = Nothing
-    , step = Nothing
-    }
-
-
-buildAttrs : QueryParams -> Attrs
-buildAttrs { v, start, end } =
-    Attrs
-        (defaultToEmpty v)
-        (start |> Maybe.map toString |> defaultToEmpty)
-        (end |> Maybe.map toString |> defaultToEmpty)
-
-
-formatTime : Float -> String
-formatTime seconds =
-    let
-        seconds_ : Int
-        seconds_ =
-            round seconds
-
-        hh : Int
-        hh =
-            seconds_ // 3600
-
-        mm : Int
-        mm =
-            seconds_
-                |> flip (%) 3600
-                |> flip (//) 60
-
-        ss : Int
-        ss =
-            seconds_
-                |> flip (%) 3600
-                |> flip (%) 60
-    in
-        [ hh, mm, ss ]
-            |> List.map toString
-            |> List.map (padLeft 2 '0')
-            |> join ":"
+subscriptions model =
+    Sub.none
 
 
 parseQueryString : Navigation.Location -> Maybe QueryParams
