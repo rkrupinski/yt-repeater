@@ -92,6 +92,8 @@ export default function thunk() {
           if (!data.metaSent) {
             data.metaSent = true;
 
+            console.log(JSON.stringify(player.getVideoData(), null, 2));
+
             this.fire('video-meta', {
               detail: Math.round(player.getDuration()),
             });
@@ -99,7 +101,7 @@ export default function thunk() {
           break;
 
         case api.PlayerState.ENDED:
-          this.loadVideo();
+          this.repeat();
           break;
 
         default:
@@ -112,6 +114,13 @@ export default function thunk() {
       const { player } = await data.playerDefer.promise;
 
       player.loadVideoById(data.playing);
+    }
+
+    async repeat() {
+      const data = embedData.get(this);
+      const { player } = await data.playerDefer.promise;
+
+      player.seekTo(data.playing.startSeconds || 0);
     }
 
     fire(evt, data) {
