@@ -2,6 +2,8 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Navigation
+import Material.Scheme as Scheme
+import Material.Color as Color
 import Router
 import Layout.Header as Header
 import Layout.Footer as Footer
@@ -172,13 +174,14 @@ view ({ videoForm, videoControls, player } as model) =
                 _ ->
                     text ""
     in
-        div [ styles Styles.container ]
-            [ Header.view
-            , renderForm
-            , renderControls
-            , Html.map PlayerMsg <| Player.view player
-            , Footer.view
-            ]
+        Scheme.topWithScheme Color.BlueGrey Color.Red <|
+            div [ styles Styles.container ]
+                [ Header.view
+                , renderForm
+                , renderControls
+                , Html.map PlayerMsg <| Player.view player
+                , Footer.view
+                ]
 
 
 subscriptions : Model -> Sub Msg

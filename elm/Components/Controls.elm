@@ -1,19 +1,21 @@
 module Components.Controls exposing (view, init, update, subscriptions, Msg, Model)
 
 import Html exposing (..)
-import Html.Events exposing (..)
 import QueryString as QS
 import Navigation
+import Material
+import Material.Button as Button
+import Material.Options as Options
 import Slider.Core as Slider
 import Slider.Helpers exposing (..)
-import Utils exposing (styles, defaultToEmpty, formatTime)
+import Utils exposing (defaultToEmpty, formatTime)
 import Router
-import Styles
 
 
 type Msg
     = SliderMsg Slider.Msg
     | ApplyRange
+    | Mdl (Material.Msg Msg)
 
 
 type alias Duration =
@@ -29,6 +31,7 @@ type Model
         { videoId : VideoId
         , range : Slider.Range
         , slider : Slider.Model
+        , mdl : Material.Model
         }
 
 
@@ -64,6 +67,7 @@ init duration ({ v, start, end } as params) =
             { videoId = defaultToEmpty v
             , range = range
             , slider = Slider.init sliderConfig
+            , mdl = Material.model
             }
 
 
@@ -102,9 +106,16 @@ update msg (Model ({ videoId, range, slider } as model)) =
             in
                 Model model ! [ Navigation.modifyUrl newUrl ]
 
+        Mdl mdlMsg ->
+            let
+                ( model_, cmd ) =
+                    Material.update Mdl mdlMsg model
+            in
+                Model model_ ! [ cmd ]
+
 
 view : Model -> Html Msg
-view (Model { range, slider }) =
+view (Model { range, slider, mdl }) =
     let
         formatValue : Float -> Float
         formatValue =
@@ -113,18 +124,23 @@ view (Model { range, slider }) =
         ( start, end ) =
             Slider.getValues slider
     in
-        div [ styles Styles.section ]
+        p []
             [ Html.map SliderMsg <| Slider.view slider
-            , p []
+            , span []
                 [ text <| formatTime <| formatValue start
                 , text " - "
                 , text <| formatTime <| formatValue end
                 ]
-            , button
-                [ onClick ApplyRange
-                , styles Styles.formElement
+            , Button.render
+                Mdl
+                [ 0 ]
+                mdl
+                [ Button.raised
+                , Options.onClick ApplyRange
+                , Options.css "verticalAlign" "baseline"
+                , Options.css "marginLeft" "1em"
                 ]
-                [ text "Apply range" ]
+                [ text "Apply" ]
             ]
 
 
@@ -135,7 +151,7 @@ subscriptions (Model { slider }) =
 
 defaultSliderConfig : Slider.Config
 defaultSliderConfig =
-    { size = Just 400
+    { size = Just 336
     , values = Nothing
     , step = Nothing
     }
