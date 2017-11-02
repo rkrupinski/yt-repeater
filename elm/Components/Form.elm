@@ -1,17 +1,20 @@
 module Components.Form exposing (view, init, update, Model, Msg)
 
 import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
+import Html.Events exposing (onSubmit)
 import QueryString as QS
 import Navigation
-import Utils exposing (styles, defaultToEmpty)
-import Styles
+import Material
+import Material.Textfield as Textfield
+import Material.Button as Button
+import Material.Options as Options
+import Utils exposing (defaultToEmpty)
 
 
 type Msg
     = InputVideoId VideoId
     | SubmitVideoId
+    | Mdl (Material.Msg Msg)
 
 
 type alias VideoId =
@@ -21,6 +24,7 @@ type alias VideoId =
 type Model
     = Model
         { videoId : Maybe VideoId
+        , mdl : Material.Model
         }
 
 
@@ -28,6 +32,7 @@ init : Maybe VideoId -> Model
 init videoId =
     Model
         { videoId = videoId
+        , mdl = Material.model
         }
 
 
@@ -47,29 +52,38 @@ update msg (Model model) =
             in
                 Model model ! [ Navigation.modifyUrl newUrl ]
 
+        Mdl mdlMsg ->
+            let
+                ( model_, cmd ) =
+                    Material.update Mdl mdlMsg model
+            in
+                Model model_ ! [ cmd ]
+
 
 view : Model -> Html Msg
-view (Model { videoId }) =
+view (Model { videoId, mdl }) =
     Html.form
         [ onSubmit SubmitVideoId
-        , styles Styles.section
         ]
-        [ label
-            [ for "videoId"
-            , styles Styles.formElement
-            ]
-            [ text "Video id:" ]
-        , input
-            [ id "videoId"
-            , name "videoId"
-            , value <| defaultToEmpty videoId
-            , onInput InputVideoId
-            , styles Styles.formElement
+        [ Textfield.render
+            Mdl
+            [ 0 ]
+            mdl
+            [ Textfield.label "Video id"
+            , Textfield.floatingLabel
+            , Textfield.text_
+            , Textfield.value <| defaultToEmpty videoId
+            , Options.onInput InputVideoId
+            , Options.css "marginRight" "1em"
+            , Options.css "width" "200px"
             ]
             []
-        , button
-            [ styles Styles.formElement
-            , type_ "submit"
+        , Button.render
+            Mdl
+            [ 1 ]
+            mdl
+            [ Button.raised
+            , Button.primary
             ]
             [ text "Load" ]
         ]

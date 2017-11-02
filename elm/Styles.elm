@@ -9,15 +9,12 @@ import Slider.ClassNames exposing (..)
 container : List Style
 container =
     [ margin <| em 1
-    , fontFamily sansSerif
     ]
 
 
 heading : List Style
 heading =
-    [ margin3 zero zero <| em 1
-    , paddingBottom <| em 1
-    , borderBottom3 (px 1) solid gray
+    [ margin3 zero zero <| em 2
     , fontSize <| em 1
     , lineHeight <| int 1
     , fontWeight normal
@@ -31,16 +28,9 @@ logo =
     ]
 
 
-formElement : List Style
-formElement =
-    [ marginRight <| em 0.5
-    , fontSize <| pct 100
-    ]
-
-
-section : List Style
-section =
-    [ marginBottom <| em 1
+player : List Style
+player =
+    [ width <| px 560
     ]
 
 
@@ -48,8 +38,9 @@ slider : Stylesheet
 slider =
     (stylesheet << namespace "slider")
         [ class Slider
-            [ height <| px 6
-            , margin2 (em 1) zero
+            [ display inlineBlock
+            , height <| px 6
+            , margin4 zero (em 1) zero zero
             , borderRadius <| px 3
             , position relative
             , backgroundColor silver
@@ -61,7 +52,7 @@ slider =
             , borderRadius <| px 6
             , position absolute
             , zIndex <| int 2
-            , backgroundColor black
+            , backgroundColor <| rgb 255 82 82
             , cursor pointer
             ]
         , class LeftKnob
@@ -74,6 +65,6 @@ slider =
             [ height <| px 6
             , position absolute
             , top zero
-            , backgroundColor gray
+            , backgroundColor <| rgb 96 125 139
             ]
         ]

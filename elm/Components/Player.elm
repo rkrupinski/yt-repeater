@@ -72,7 +72,7 @@ view (Model { attrs }) =
         { v, start, end } =
             attrs
     in
-        div [ styles Styles.section ]
+        p [ styles Styles.player ]
             [ node "youtube-embed"
                 [ on "yt-api-ready" decodeApiReady
                 , on "video-meta" decodeVideoMeta
