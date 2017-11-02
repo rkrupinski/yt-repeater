@@ -90,11 +90,17 @@ export default function thunk() {
       switch (playerState) {
         case api.PlayerState.PLAYING:
           if (!data.metaSent) {
-            data.metaSent = true;
+            const { title } = player.getVideoData();
+            const duration = Math.round(player.getDuration());
 
             this.fire('video-meta', {
-              detail: Math.round(player.getDuration()),
+              detail: {
+                title,
+                duration,
+              },
             });
+
+            data.metaSent = true;
           }
           break;
 

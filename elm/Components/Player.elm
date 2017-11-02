@@ -11,12 +11,18 @@ import Styles
 
 type Msg
     = YTApiReady
-    | VideoMeta Duration
+    | VideoMeta Meta
     | SetParams Router.Params
 
 
 type alias Duration =
     Int
+
+
+type alias Meta =
+    { title : String
+    , duration : Duration
+    }
 
 
 type alias Attrs =
@@ -49,7 +55,7 @@ update msg (Model model) =
         YTApiReady ->
             Model { model | apiReady = True } ! []
 
-        VideoMeta duration ->
+        VideoMeta { duration } ->
             Model { model | videoDuration = Just duration } ! []
 
         SetParams params ->
@@ -91,7 +97,10 @@ decodeApiReady =
 
 decodeVideoMeta : Decode.Decoder Msg
 decodeVideoMeta =
-    Decode.map VideoMeta <| Decode.field "detail" Decode.int
+    Decode.map VideoMeta <|
+        Decode.map2 Meta
+            (Decode.at [ "detail", "title" ] Decode.string)
+            (Decode.at [ "detail", "duration" ] Decode.int)
 
 
 buildAttrs : Router.Params -> Attrs
