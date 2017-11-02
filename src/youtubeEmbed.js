@@ -92,8 +92,6 @@ export default function thunk() {
           if (!data.metaSent) {
             data.metaSent = true;
 
-            console.log(JSON.stringify(player.getVideoData(), null, 2));
-
             this.fire('video-meta', {
               detail: Math.round(player.getDuration()),
             });
