@@ -33,13 +33,13 @@ type alias Model =
     }
 
 
-baseUrl : Router.Url
-baseUrl =
-    ""
+type alias Flags =
+    { baseUrl : String
+    }
 
 
-init : Navigation.Location -> ( Model, Cmd Msg )
-init location =
+init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
+init { baseUrl } location =
     let
         router : Router.Model
         router =
@@ -48,19 +48,21 @@ init location =
         params : Router.Params
         params =
             Router.getParams router
+
+        player : Player.Model
+        player =
+            Player.init params
+
+        history : History.Model
+        history =
+            History.init baseUrl
     in
-        Model
-            Nothing
-            Nothing
-            (Player.init params)
-            History.init
-            router
-            ! []
+        Model Nothing Nothing player history router ! []
 
 
-main : Program Never Model Msg
+main : Program Flags Model Msg
 main =
-    Navigation.program UrlChange
+    Navigation.programWithFlags UrlChange
         { init = init
         , view = view
         , update = update

@@ -11,6 +11,7 @@ module Components.History
 import Html exposing (..)
 import Json.Decode as Decode
 import Ports exposing (readHistory)
+import Router
 
 
 type Msg
@@ -19,7 +20,8 @@ type Msg
 
 type Model
     = Model
-        { entries : List Entry
+        { baseUrl : Router.Url
+        , entries : List Entry
         }
 
 
@@ -31,10 +33,11 @@ type alias Entry =
     }
 
 
-init : Model
-init =
+init : Router.Url -> Model
+init baseUrl =
     Model
-        { entries = []
+        { baseUrl = baseUrl
+        , entries = []
         }
 
 
