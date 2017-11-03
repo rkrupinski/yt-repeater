@@ -1,16 +1,20 @@
 import localforage from 'localforage';
 
-const dbName = 'YT_REPEATER_HISTORY';
-const entriesKey = 'ENTRIES';
+const dbName = 'yt-repeater';
+const entriesKey = 'entries';
 const historySize = 10;
 
 export function initStorage() {
-  return localforage.ready();
+  return localforage.ready()
+    .then(() => {
+      localforage.config({
+        name: dbName,
+        storeName: dbName,
+      });
+    });
 }
 
 export function initHistory(writePort, readPort) {
-  localforage.config({ name: dbName });
-
   writePort.subscribe(async (newEntry) => {
     const { videoId } = newEntry;
     const entries = await localforage.getItem(entriesKey) || [];

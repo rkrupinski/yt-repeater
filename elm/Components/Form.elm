@@ -93,5 +93,5 @@ view (Model { videoId, mdl }) =
             [ Button.raised
             , Button.primary
             ]
-            [ text "Load" ]
+            [ text "Repeat" ]
         ]
