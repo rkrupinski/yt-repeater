@@ -30,12 +30,17 @@ type alias Model =
     }
 
 
+baseUrl : Router.Url
+baseUrl =
+    ""
+
+
 init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
     let
         router : Router.Model
         router =
-            Router.init location
+            Router.init baseUrl location
 
         params : Router.Params
         params =

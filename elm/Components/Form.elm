@@ -76,6 +76,7 @@ view (Model { videoId, mdl }) =
             , Options.onInput InputVideoId
             , Options.css "marginRight" "1em"
             , Options.css "width" "200px"
+            , Options.id "videoId"
             ]
             []
         , Button.render
