@@ -1,23 +1,23 @@
 import localforage from 'localforage';
 
-const dbName = 'yt-repeater';
-const entriesKey = 'entries';
-const historySize = 10;
+const DB_NAME = 'YT_REPEATER';
+const STORE_NAME = 'HISTORY';
+const ENTRIES_KEY = 'ENTRIES';
+const HISTORY_SIZE = 10;
 
 export function initStorage() {
-  return localforage.ready()
-    .then(() => {
-      localforage.config({
-        name: dbName,
-        storeName: dbName,
-      });
-    });
+  localforage.config({
+    name: DB_NAME,
+    storeName: STORE_NAME,
+  });
+
+  return localforage.ready();
 }
 
 export function initHistory(writePort, readPort) {
   writePort.subscribe(async (newEntry) => {
     const { videoId } = newEntry;
-    const entries = await localforage.getItem(entriesKey) || [];
+    const entries = await localforage.getItem(ENTRIES_KEY) || [];
     const currentIndex = entries.findIndex(entry => entry.videoId === videoId);
 
     if (currentIndex !== -1) {
@@ -25,9 +25,9 @@ export function initHistory(writePort, readPort) {
     }
 
     entries.unshift(newEntry);
-    entries.splice(historySize);
+    entries.splice(HISTORY_SIZE);
 
-    localforage.setItem(entriesKey, entries);
+    localforage.setItem(ENTRIES_KEY, entries);
 
     readPort.send(entries);
   });
