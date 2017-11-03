@@ -1,4 +1,14 @@
-module Router exposing (init, update, getParams, getBaseUrl, Model, Params, Msg(UrlChange), Url)
+module Router
+    exposing
+        ( init
+        , update
+        , getParams
+        , getBaseUrl
+        , Model
+        , Params
+        , Msg(UrlChange)
+        , Url
+        )
 
 import UrlParser as Url exposing ((<?>), parsePath, stringParam, intParam, s)
 import Navigation

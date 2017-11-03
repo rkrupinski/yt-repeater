@@ -1,4 +1,12 @@
-module Components.Controls exposing (view, init, update, subscriptions, Msg, Model)
+module Components.Controls
+    exposing
+        ( view
+        , init
+        , update
+        , subscriptions
+        , Msg
+        , Model
+        )
 
 import Html exposing (..)
 import QueryString as QS
