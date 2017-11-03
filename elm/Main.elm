@@ -10,6 +10,7 @@ import Layout.Footer as Footer
 import Components.Form as Form
 import Components.Controls as Controls
 import Components.Player as Player
+import Components.History as History
 import Utils exposing (styles)
 import Styles
 
@@ -18,6 +19,7 @@ type Msg
     = FormMsg Form.Msg
     | ControlsMsg Controls.Msg
     | PlayerMsg Player.Msg
+    | HistoryMsg History.Msg
     | RouterMsg Router.Msg
     | UrlChange Navigation.Location
 
@@ -26,6 +28,7 @@ type alias Model =
     { videoForm : Maybe Form.Model
     , videoControls : Maybe Controls.Model
     , player : Player.Model
+    , history : History.Model
     , router : Router.Model
     }
 
@@ -50,6 +53,7 @@ init location =
             Nothing
             Nothing
             (Player.init params)
+            History.init
             router
             ! []
 
@@ -65,7 +69,7 @@ main =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ videoForm, videoControls, player, router } as model) =
+update msg ({ videoForm, videoControls, player, history, router } as model) =
     case msg of
         FormMsg formMsg ->
             case videoForm of
@@ -134,6 +138,16 @@ update msg ({ videoForm, videoControls, player, router } as model) =
                 }
                     ! [ Cmd.map PlayerMsg cmd ]
 
+        HistoryMsg historyMsg ->
+            let
+                ( history_, cmd ) =
+                    History.update historyMsg history
+            in
+                { model
+                    | history = history_
+                }
+                    ! [ Cmd.map HistoryMsg cmd ]
+
         RouterMsg _ ->
             model ! []
 
@@ -159,7 +173,7 @@ update msg ({ videoForm, videoControls, player, router } as model) =
 
 
 view : Model -> Html Msg
-view ({ videoForm, videoControls, player } as model) =
+view ({ videoForm, videoControls, player, history } as model) =
     let
         renderForm : Html Msg
         renderForm =
@@ -185,15 +199,26 @@ view ({ videoForm, videoControls, player } as model) =
                 , renderForm
                 , renderControls
                 , Html.map PlayerMsg <| Player.view player
+                , Html.map HistoryMsg <| History.view history
                 , Footer.view
                 ]
 
 
 subscriptions : Model -> Sub Msg
-subscriptions { videoControls } =
-    case videoControls of
-        Just videoControls_ ->
-            Sub.map ControlsMsg <| Controls.subscriptions videoControls_
+subscriptions { videoControls, history } =
+    let
+        controlsSubs =
+            case videoControls of
+                Just videoControls_ ->
+                    Sub.map ControlsMsg <| Controls.subscriptions videoControls_
 
-        _ ->
-            Sub.none
+                _ ->
+                    Sub.none
+
+        historySubs =
+            Sub.map HistoryMsg <| History.subscriptions history
+    in
+        Sub.batch
+            [ controlsSubs
+            , historySubs
+            ]

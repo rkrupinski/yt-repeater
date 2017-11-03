@@ -8,7 +8,7 @@ export function initStorage() {
   return localforage.ready();
 }
 
-export function initHistory(writePort) {
+export function initHistory(writePort, readPort) {
   localforage.config({ name: dbName });
 
   writePort.subscribe(async (newEntry) => {
@@ -25,6 +25,6 @@ export function initHistory(writePort) {
 
     localforage.setItem(entriesKey, entries);
 
-    console.log(entries);
+    readPort.send(entries);
   });
 }
