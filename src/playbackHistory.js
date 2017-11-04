@@ -5,6 +5,12 @@ const STORE_NAME = 'HISTORY';
 const ENTRIES_KEY = 'ENTRIES';
 const HISTORY_SIZE = 10;
 
+async function getEntries() {
+  const entries = await localforage.getItem(ENTRIES_KEY);
+
+  return entries || [];
+}
+
 export function initStorage() {
   localforage.config({
     name: DB_NAME,
@@ -14,10 +20,12 @@ export function initStorage() {
   return localforage.ready();
 }
 
-export function initHistory(writePort, readPort) {
+export async function initHistory(writePort, readPort, clearPort) {
+  readPort.send(await getEntries());
+
   writePort.subscribe(async (newEntry) => {
     const { videoId } = newEntry;
-    const entries = await localforage.getItem(ENTRIES_KEY) || [];
+    const entries = await getEntries();
     const currentIndex = entries.findIndex(entry => entry.videoId === videoId);
 
     if (currentIndex !== -1) {
@@ -27,8 +35,14 @@ export function initHistory(writePort, readPort) {
     entries.unshift(newEntry);
     entries.splice(HISTORY_SIZE);
 
-    localforage.setItem(ENTRIES_KEY, entries);
+    await localforage.setItem(ENTRIES_KEY, entries);
 
-    readPort.send(entries);
+    readPort.send(await getEntries());
+  });
+
+  clearPort.subscribe(async () => {
+    await localforage.setItem(ENTRIES_KEY, []);
+
+    readPort.send(await getEntries());
   });
 }

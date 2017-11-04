@@ -4,24 +4,32 @@ module Components.History
         , init
         , update
         , subscriptions
+        , decodeEntries
         , Msg
         , Model
         )
 
 import Html exposing (..)
 import Json.Decode as Decode
-import Ports exposing (readHistory)
+import Json.Encode as Encode
+import Material
+import Material.Button as Button
+import Material.Options as Options
+import Ports exposing (readHistory, clearHistory)
 import Router
 
 
 type Msg
     = ReadEntries (Result String (List Entry))
+    | ClearHistory
+    | Mdl (Material.Msg Msg)
 
 
 type Model
     = Model
         { baseUrl : Router.Url
         , entries : List Entry
+        , mdl : Material.Model
         }
 
 
@@ -38,6 +46,7 @@ init baseUrl =
     Model
         { baseUrl = baseUrl
         , entries = []
+        , mdl = Material.model
         }
 
 
@@ -54,14 +63,40 @@ update msg (Model model) =
         ReadEntries (Result.Err _) ->
             Model model ! []
 
+        ClearHistory ->
+            Model model ! [ clearHistory Encode.null ]
+
+        Mdl mdlMsg ->
+            let
+                ( model_, cmd ) =
+                    Material.update Mdl mdlMsg model
+            in
+                Model model_ ! [ cmd ]
+
 
 view : Model -> Html Msg
-view (Model { entries }) =
-    ul []
-        (List.map
-            (\entry -> li [] [ text entry.title ])
-            entries
-        )
+view (Model { entries, mdl }) =
+    case List.length entries of
+        0 ->
+            p [] [ text "History is empty" ]
+
+        _ ->
+            div []
+                [ ul [] <| List.map renderEntry entries
+                , Button.render
+                    Mdl
+                    [ 0 ]
+                    mdl
+                    [ Button.raised
+                    , Options.onClick ClearHistory
+                    ]
+                    [ text "Apply" ]
+                ]
+
+
+renderEntry : Entry -> Html Msg
+renderEntry { title } =
+    li [] [ text title ]
 
 
 subscriptions : Model -> Sub Msg

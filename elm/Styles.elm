@@ -39,20 +39,20 @@ slider =
     (stylesheet << namespace "slider")
         [ class Slider
             [ display inlineBlock
-            , height <| px 6
-            , margin4 zero (em 1) zero zero
-            , borderRadius <| px 3
+            , verticalAlign middle
+            , height <| px 2
+            , marginRight <| em 1
             , position relative
             , backgroundColor silver
             ]
         , class Knob
             [ width <| px 12
             , height <| px 12
-            , marginTop <| px -3
+            , marginTop <| px -5
             , borderRadius <| px 6
             , position absolute
             , zIndex <| int 2
-            , backgroundColor <| rgb 255 82 82
+            , backgroundColor <| rgb 96 125 139
             , cursor pointer
             ]
         , class LeftKnob
@@ -62,7 +62,7 @@ slider =
             [ marginLeft <| px -6
             ]
         , class Range
-            [ height <| px 6
+            [ height <| px 2
             , position absolute
             , top zero
             , backgroundColor <| rgb 96 125 139

@@ -15,7 +15,7 @@ import Html.Events exposing (..)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Utils exposing (styles, defaultToEmpty, encodeMaybe)
-import Ports exposing (addToHistory)
+import Ports exposing (amendHistory)
 import Router
 import Styles
 
@@ -78,7 +78,7 @@ update msg (Model model) =
             Model { model | videoDuration = Just duration } ! []
 
         VideoPlaying playing ->
-            Model model ! [ addToHistory <| encodeEntry playing ]
+            Model model ! [ amendHistory <| encodeEntry playing ]
 
         SetParams params ->
             Model { model | attrs = buildAttrs params } ! []

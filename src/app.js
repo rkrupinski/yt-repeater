@@ -11,11 +11,11 @@ Promise.all([
   .then(() => {
     customElements.define('youtube-embed', lazy());
 
-    const { addToHistory, readHistory, clearHistory } = Main.fullscreen({
+    const { amendHistory, readHistory, clearHistory } = Main.fullscreen({
       baseUrl: window.location.pathname
         .replace(/^\//, '')
         .replace(/\/$/, ''),
     }).ports;
 
-    initHistory(addToHistory, readHistory, clearHistory);
+    initHistory(amendHistory, readHistory, clearHistory);
   });
