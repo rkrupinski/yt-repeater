@@ -87,7 +87,7 @@ view (Model { baseUrl, entries, mdl }) =
         recentlyPlayed =
             case List.length entries of
                 0 ->
-                    p [] [ text "There is nothing here yet" ]
+                    p [] [ text "There is nothing here yet." ]
 
                 _ ->
                     ul
@@ -95,25 +95,6 @@ view (Model { baseUrl, entries, mdl }) =
                         ]
                     <|
                         List.map (renderEntry baseUrl) entries
-
-        clearBtn : Html Msg
-        clearBtn =
-            case List.length entries of
-                0 ->
-                    text ""
-
-                _ ->
-                    p []
-                        [ Button.render
-                            Mdl
-                            [ 0 ]
-                            mdl
-                            [ Options.onClick ClearHistory
-                            , Button.raised
-                            ]
-                            [ text "Clear history"
-                            ]
-                        ]
     in
         div []
             [ Options.styled h3
@@ -121,7 +102,18 @@ view (Model { baseUrl, entries, mdl }) =
                 [ text "Recently played:"
                 ]
             , recentlyPlayed
-            , clearBtn
+            , p []
+                [ Button.render
+                    Mdl
+                    [ 0 ]
+                    mdl
+                    [ Options.onClick ClearHistory
+                    , Options.disabled <| List.length entries == 0
+                    , Button.raised
+                    ]
+                    [ text "Clear history"
+                    ]
+                ]
             ]
 
 
