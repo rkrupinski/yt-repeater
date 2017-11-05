@@ -29,6 +29,7 @@
     "webpack-dev-server": "^2.7.1"
   },
   "dependencies": {
+    "localforage": "^1.5.3",
     "lodash.debounce": "^4.0.8"
   }
 }

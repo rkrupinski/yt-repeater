@@ -1,11 +1,21 @@
 import 'Stylesheets';
 import polyfill from 'webcomponents';
-import thunk from 'youtubeEmbed';
+import lazy from 'youtubeEmbed';
+import { initStorage, initHistory } from 'playbackHistory';
 import { Main } from 'Main';
 
-polyfill()
+Promise.all([
+  polyfill(),
+  initStorage(),
+])
   .then(() => {
-    customElements.define('youtube-embed', thunk());
+    customElements.define('youtube-embed', lazy());
 
-    Main.fullscreen();
+    const { amendHistory, readHistory, clearHistory } = Main.fullscreen({
+      baseUrl: window.location.pathname
+        .replace(/^\//, '')
+        .replace(/\/$/, ''),
+    }).ports;
+
+    initHistory(amendHistory, readHistory, clearHistory);
   });

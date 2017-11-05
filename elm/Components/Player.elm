@@ -1,22 +1,47 @@
-module Components.Player exposing (view, init, update, getApiReady, getVideoDuration, Msg(SetParams), Model)
+module Components.Player
+    exposing
+        ( view
+        , init
+        , update
+        , getApiReady
+        , getVideoDuration
+        , Msg(SetParams)
+        , Model
+        )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode
-import Utils exposing (styles, defaultToEmpty)
+import Json.Encode as Encode
+import Utils exposing (styles, defaultToEmpty, encodeMaybe)
+import Ports exposing (amendHistory)
 import Router
 import Styles
 
 
 type Msg
     = YTApiReady
-    | VideoMeta Duration
+    | VideoMeta Meta
+    | VideoPlaying Playing
     | SetParams Router.Params
 
 
 type alias Duration =
     Int
+
+
+type alias Meta =
+    { duration : Duration
+    }
+
+
+type alias Playing =
+    { videoId : String
+    , title : String
+    , startSeconds : Maybe Int
+    , endSeconds : Maybe Int
+    }
 
 
 type alias Attrs =
@@ -49,8 +74,11 @@ update msg (Model model) =
         YTApiReady ->
             Model { model | apiReady = True } ! []
 
-        VideoMeta duration ->
+        VideoMeta ({ duration } as meta) ->
             Model { model | videoDuration = Just duration } ! []
+
+        VideoPlaying playing ->
+            Model model ! [ amendHistory <| encodeEntry playing ]
 
         SetParams params ->
             Model { model | attrs = buildAttrs params } ! []
@@ -76,6 +104,7 @@ view (Model { attrs }) =
             [ node "youtube-embed"
                 [ on "yt-api-ready" decodeApiReady
                 , on "video-meta" decodeVideoMeta
+                , on "video-playing" decodeVideoPlaying
                 , attribute "v" v
                 , attribute "start" start
                 , attribute "end" end
@@ -91,7 +120,29 @@ decodeApiReady =
 
 decodeVideoMeta : Decode.Decoder Msg
 decodeVideoMeta =
-    Decode.map VideoMeta <| Decode.field "detail" Decode.int
+    Decode.map VideoMeta <|
+        Decode.map Meta
+            (Decode.at [ "detail", "duration" ] Decode.int)
+
+
+decodeVideoPlaying : Decode.Decoder Msg
+decodeVideoPlaying =
+    Decode.map VideoPlaying <|
+        Decode.map4 Playing
+            (Decode.at [ "detail", "videoId" ] Decode.string)
+            (Decode.at [ "detail", "title" ] Decode.string)
+            (Decode.maybe <| Decode.at [ "detail", "startSeconds" ] Decode.int)
+            (Decode.maybe <| Decode.at [ "detail", "endSeconds" ] Decode.int)
+
+
+encodeEntry : Playing -> Encode.Value
+encodeEntry { videoId, title, startSeconds, endSeconds } =
+    Encode.object
+        [ ( "videoId", Encode.string videoId )
+        , ( "title", Encode.string title )
+        , ( "startSeconds", encodeMaybe Encode.int startSeconds )
+        , ( "endSeconds", encodeMaybe Encode.int endSeconds )
+        ]
 
 
 buildAttrs : Router.Params -> Attrs

@@ -1,6 +1,16 @@
-module Router exposing (init, update, getParams, Model, Params, Msg(UrlChange))
+module Router
+    exposing
+        ( init
+        , update
+        , getParams
+        , getBaseUrl
+        , Model
+        , Params
+        , Msg(UrlChange)
+        , Url
+        )
 
-import UrlParser as Url exposing ((<?>), parsePath, stringParam, intParam, top)
+import UrlParser as Url exposing ((<?>), parsePath, stringParam, intParam, s)
 import Navigation
 
 
@@ -8,9 +18,14 @@ type Msg
     = UrlChange Navigation.Location
 
 
+type alias Url =
+    String
+
+
 type Model
     = Model
-        { params : Params
+        { baseUrl : Url
+        , params : Params
         }
 
 
@@ -21,18 +36,19 @@ type alias Params =
     }
 
 
-init : Navigation.Location -> Model
-init location =
+init : Url -> Navigation.Location -> Model
+init baseUrl location =
     Model
-        { params = extractQueryParams location
+        { baseUrl = baseUrl
+        , params = extractQueryParams baseUrl location
         }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update (UrlChange location) (Model model) =
+update (UrlChange location) (Model ({ baseUrl } as model)) =
     Model
         { model
-            | params = extractQueryParams location
+            | params = extractQueryParams baseUrl location
         }
         ! []
 
@@ -42,20 +58,25 @@ getParams (Model { params }) =
     params
 
 
-parseQueryString : Navigation.Location -> Maybe Params
-parseQueryString location =
+getBaseUrl : Model -> Url
+getBaseUrl (Model { baseUrl }) =
+    baseUrl
+
+
+parseQueryString : Url -> Navigation.Location -> Maybe Params
+parseQueryString baseUrl location =
     let
         queryParser =
-            top <?> stringParam "v" <?> intParam "start" <?> intParam "end"
+            s baseUrl <?> stringParam "v" <?> intParam "start" <?> intParam "end"
     in
         parsePath (Url.map Params queryParser) location
 
 
-extractQueryParams : Navigation.Location -> Params
-extractQueryParams location =
+extractQueryParams : Url -> Navigation.Location -> Params
+extractQueryParams baseUrl location =
     let
         defaultParams : Params
         defaultParams =
             Params Nothing Nothing Nothing
     in
-        Maybe.withDefault defaultParams <| parseQueryString location
+        Maybe.withDefault defaultParams <| parseQueryString baseUrl location

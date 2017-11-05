@@ -4,7 +4,7 @@ import debounce from 'lodash.debounce';
 
 const embedData = new WeakMap();
 
-export default function thunk() {
+export default function lazy() {
   return class YouTubeEmbed extends HTMLElement {
     static get observedAttributes() {
       return [
@@ -89,11 +89,24 @@ export default function thunk() {
 
       switch (playerState) {
         case api.PlayerState.PLAYING:
-          if (!data.metaSent) {
-            data.metaSent = true;
+          {
+            const { title } = player.getVideoData();
+            const duration = Math.round(player.getDuration());
 
-            this.fire('video-meta', {
-              detail: Math.round(player.getDuration()),
+            if (!data.metaSent) {
+              this.fire('video-meta', {
+                detail: {
+                  duration,
+                },
+              });
+
+              data.metaSent = true;
+            }
+
+            this.fire('video-playing', {
+              detail: Object.assign({}, data.playing, {
+                title,
+              }),
             });
           }
           break;

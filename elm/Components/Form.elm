@@ -1,6 +1,14 @@
-module Components.Form exposing (view, init, update, Model, Msg)
+module Components.Form
+    exposing
+        ( view
+        , init
+        , update
+        , Model
+        , Msg
+        )
 
 import Html exposing (..)
+import Html.Attributes exposing (..)
 import Html.Events exposing (onSubmit)
 import QueryString as QS
 import Navigation
@@ -8,6 +16,8 @@ import Material
 import Material.Textfield as Textfield
 import Material.Button as Button
 import Material.Options as Options
+import Material.Typography as Typography
+import Material.Tooltip as Tooltip
 import Utils exposing (defaultToEmpty)
 
 
@@ -74,8 +84,8 @@ view (Model { videoId, mdl }) =
             , Textfield.text_
             , Textfield.value <| defaultToEmpty videoId
             , Options.onInput InputVideoId
-            , Options.css "marginRight" "1em"
-            , Options.css "width" "200px"
+            , Options.css "width" "150px"
+            , Options.id "videoId"
             ]
             []
         , Button.render
@@ -84,6 +94,36 @@ view (Model { videoId, mdl }) =
             mdl
             [ Button.raised
             , Button.primary
+            , Options.css "margin" "0 1em"
             ]
-            [ text "Load" ]
+            [ text "Repeat" ]
+        , Options.styled span
+            [ Typography.caption
+            , Options.css "cursor" "help"
+            , Options.css "textDecoration" "underline"
+            , Tooltip.attach Mdl [ 2 ]
+            ]
+            [ text "What's video id?" ]
+        , Tooltip.render Mdl
+            [ 2 ]
+            mdl
+            [ Tooltip.right
+            , Tooltip.large
+            , Tooltip.element hackedTooltipLOL
+            ]
+            [ Options.styled span
+                [ Options.css "whiteSpace" "nowrap" ]
+                [ text "youtube.com/watch?v="
+                , Options.styled span
+                    [ Options.css "color" "rgb(255, 82, 82)"
+                    , Options.css "fontSize" "1.25em"
+                    ]
+                    [ text <| String.repeat 11 "X" ]
+                ]
+            ]
         ]
+
+
+hackedTooltipLOL : List (Attribute msg) -> List (Html msg) -> Html msg
+hackedTooltipLOL attrs children =
+    div ([ style [ ( "maxWidth", "none" ) ] ] ++ attrs) children

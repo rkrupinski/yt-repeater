@@ -3,6 +3,8 @@ module Utils exposing (..)
 import Html exposing (Attribute)
 import Html.Attributes exposing (style)
 import String exposing (padLeft, join)
+import Json.Encode as Encode
+import Json.Decode as Decode
 import Css exposing (asPairs)
 
 
@@ -43,3 +45,16 @@ formatTime seconds =
             |> List.map toString
             |> List.map (padLeft 2 '0')
             |> join ":"
+
+
+encodeMaybe : (a -> Encode.Value) -> Maybe a -> Encode.Value
+encodeMaybe encoder maybe =
+    Maybe.map encoder maybe |> Maybe.withDefault Encode.null
+
+
+truncateText : Int -> String -> String
+truncateText chars txt =
+    if (String.length txt > chars) then
+        String.slice 0 chars txt ++ "..."
+    else
+        txt
