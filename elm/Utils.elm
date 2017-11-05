@@ -4,7 +4,6 @@ import Html exposing (Attribute)
 import Html.Attributes exposing (style)
 import String exposing (padLeft, join)
 import Json.Encode as Encode
-import Json.Decode as Decode
 import Css exposing (asPairs)
 
 
