@@ -50,3 +50,11 @@ formatTime seconds =
 encodeMaybe : (a -> Encode.Value) -> Maybe a -> Encode.Value
 encodeMaybe encoder maybe =
     Maybe.map encoder maybe |> Maybe.withDefault Encode.null
+
+
+truncateText : Int -> String -> String
+truncateText chars txt =
+    if (String.length txt > chars) then
+        String.slice 0 chars txt ++ "..."
+    else
+        txt

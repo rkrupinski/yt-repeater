@@ -10,11 +10,15 @@ module Components.History
         )
 
 import Html exposing (..)
+import Html.Attributes exposing (..)
 import Json.Decode as Decode
 import Json.Encode as Encode
+import QueryString as QS
 import Material
 import Material.Button as Button
+import Material.Typography as Typography
 import Material.Options as Options
+import Utils exposing (formatTime, truncateText)
 import Ports exposing (readHistory, clearHistory)
 import Router
 
@@ -75,28 +79,109 @@ update msg (Model model) =
 
 
 view : Model -> Html Msg
-view (Model { entries, mdl }) =
-    case List.length entries of
-        0 ->
-            p [] [ text "History is empty" ]
+view (Model { baseUrl, entries, mdl }) =
+    let
+        recentlyPlayed : Html Msg
+        recentlyPlayed =
+            case List.length entries of
+                0 ->
+                    p [] [ text "There is nothing here yet" ]
+
+                _ ->
+                    ul [] <| List.map (renderEntry baseUrl) entries
+
+        clearBtn : Html Msg
+        clearBtn =
+            case List.length entries of
+                0 ->
+                    text ""
+
+                _ ->
+                    p []
+                        [ Button.render
+                            Mdl
+                            [ 0 ]
+                            mdl
+                            [ Options.onClick ClearHistory
+                            , Button.raised
+                            ]
+                            [ text "Clear history"
+                            ]
+                        ]
+    in
+        div []
+            [ Options.styled h3
+                [ Typography.title ]
+                [ text "Recently played:"
+                ]
+            , recentlyPlayed
+            , clearBtn
+            ]
+
+
+addMaybe : String -> Maybe a -> QS.QueryString -> QS.QueryString
+addMaybe name value =
+    case value of
+        Just value_ ->
+            QS.add name <| toString value_
 
         _ ->
-            div []
-                [ ul [] <| List.map renderEntry entries
-                , Button.render
-                    Mdl
-                    [ 0 ]
-                    mdl
-                    [ Button.raised
-                    , Options.onClick ClearHistory
+            identity
+
+
+permalink : Router.Url -> Entry -> String
+permalink baseUrl { videoId, startSeconds, endSeconds } =
+    let
+        query : String
+        query =
+            QS.empty
+                |> QS.add "v" videoId
+                |> addMaybe "start" startSeconds
+                |> addMaybe "end" endSeconds
+                |> QS.render
+    in
+        baseUrl ++ query
+
+
+thumbUrl : String -> String
+thumbUrl videoId =
+    "https://img.youtube.com/vi/" ++ videoId ++ "/2.jpg"
+
+
+renderRange : Maybe Int -> Maybe Int -> Html never
+renderRange start end =
+    case ( start, end ) of
+        ( Just start_, Just end_ ) ->
+            let
+                format : Int -> String
+                format =
+                    toFloat >> formatTime
+            in
+                span []
+                    [ text <| format start_
+                    , text " - "
+                    , text <| format end_
                     ]
-                    [ text "Apply" ]
+
+        _ ->
+            text ""
+
+
+renderEntry : Router.Url -> Entry -> Html Msg
+renderEntry baseUrl ({ videoId, title, startSeconds, endSeconds } as entry) =
+    li []
+        [ a
+            [ href <| permalink baseUrl entry ]
+            [ img
+                [ width 120
+                , height 90
+                , src <| thumbUrl videoId
                 ]
-
-
-renderEntry : Entry -> Html Msg
-renderEntry { title } =
-    li [] [ text title ]
+                []
+            , span [] [ text <| truncateText 40 title ]
+            , renderRange startSeconds endSeconds
+            ]
+        ]
 
 
 subscriptions : Model -> Sub Msg
