@@ -55,7 +55,7 @@ init { baseUrl } location =
 
         history : History.Model
         history =
-            History.init baseUrl
+            History.init
     in
         Model Nothing Nothing player history router ! []
 

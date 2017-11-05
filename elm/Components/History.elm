@@ -21,7 +21,6 @@ import Material.Options as Options
 import Material.Icon as Icon
 import Utils exposing (formatTime, truncateText, styles)
 import Ports exposing (readHistory, clearHistory)
-import Router
 import Styles
 
 
@@ -33,8 +32,7 @@ type Msg
 
 type Model
     = Model
-        { baseUrl : Router.Url
-        , entries : List Entry
+        { entries : List Entry
         , mdl : Material.Model
         }
 
@@ -47,11 +45,10 @@ type alias Entry =
     }
 
 
-init : Router.Url -> Model
-init baseUrl =
+init : Model
+init =
     Model
-        { baseUrl = baseUrl
-        , entries = []
+        { entries = []
         , mdl = Material.model
         }
 
@@ -81,7 +78,7 @@ update msg (Model model) =
 
 
 view : Model -> Html Msg
-view (Model { baseUrl, entries, mdl }) =
+view (Model { entries, mdl }) =
     let
         recentlyPlayed : Html Msg
         recentlyPlayed =
@@ -94,7 +91,7 @@ view (Model { baseUrl, entries, mdl }) =
                         [ styles Styles.history
                         ]
                     <|
-                        List.map (renderEntry baseUrl) entries
+                        List.map renderEntry entries
     in
         div []
             [ Options.styled h3
@@ -127,18 +124,13 @@ addMaybe name value =
             identity
 
 
-permalink : Router.Url -> Entry -> String
-permalink baseUrl { videoId, startSeconds, endSeconds } =
-    let
-        query : String
-        query =
-            QS.empty
-                |> QS.add "v" videoId
-                |> addMaybe "start" startSeconds
-                |> addMaybe "end" endSeconds
-                |> QS.render
-    in
-        baseUrl ++ query
+permalink : Entry -> String
+permalink { videoId, startSeconds, endSeconds } =
+    QS.empty
+        |> QS.add "v" videoId
+        |> addMaybe "start" startSeconds
+        |> addMaybe "end" endSeconds
+        |> QS.render
 
 
 thumbUrl : String -> String
@@ -170,11 +162,11 @@ renderRange start end =
             text ""
 
 
-renderEntry : Router.Url -> Entry -> Html Msg
-renderEntry baseUrl ({ videoId, title, startSeconds, endSeconds } as entry) =
+renderEntry : Entry -> Html Msg
+renderEntry ({ videoId, title, startSeconds, endSeconds } as entry) =
     li [ styles Styles.historyEntry ]
         [ a
-            [ href <| permalink baseUrl entry ]
+            [ href <| permalink entry ]
             [ img
                 [ width 60
                 , height 45
