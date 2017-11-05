@@ -34,6 +34,37 @@ player =
     ]
 
 
+history : List Style
+history =
+    [ listStyle none
+    , padding zero
+    ]
+
+
+historyEntry : List Style
+historyEntry =
+    [ marginBottom <| em 1
+    , overflow hidden
+    , lineHeight <| em 1.6
+    ]
+
+
+historyThumb : List Style
+historyThumb =
+    [ marginRight <| em 1
+    , float left
+    ]
+
+
+historyRange : List Style
+historyRange =
+    [ display inlineBlock
+    , fontSize <| em 0.85
+    , textDecoration none
+    , color gray
+    ]
+
+
 slider : Stylesheet
 slider =
     (stylesheet << namespace "slider")

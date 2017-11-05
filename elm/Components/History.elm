@@ -18,9 +18,11 @@ import Material
 import Material.Button as Button
 import Material.Typography as Typography
 import Material.Options as Options
-import Utils exposing (formatTime, truncateText)
+import Material.Icon as Icon
+import Utils exposing (formatTime, truncateText, styles)
 import Ports exposing (readHistory, clearHistory)
 import Router
+import Styles
 
 
 type Msg
@@ -88,7 +90,11 @@ view (Model { baseUrl, entries, mdl }) =
                     p [] [ text "There is nothing here yet" ]
 
                 _ ->
-                    ul [] <| List.map (renderEntry baseUrl) entries
+                    ul
+                        [ styles Styles.history
+                        ]
+                    <|
+                        List.map (renderEntry baseUrl) entries
 
         clearBtn : Html Msg
         clearBtn =
@@ -157,8 +163,13 @@ renderRange start end =
                 format =
                     toFloat >> formatTime
             in
-                span []
-                    [ text <| format start_
+                span [ styles Styles.historyRange ]
+                    [ Icon.view "schedule"
+                        [ Icon.size18
+                        , Options.css "verticalAlign" "middle"
+                        , Options.css "margin" "-2px 3px -1px -3px"
+                        ]
+                    , text <| format start_
                     , text " - "
                     , text <| format end_
                     ]
@@ -169,16 +180,18 @@ renderRange start end =
 
 renderEntry : Router.Url -> Entry -> Html Msg
 renderEntry baseUrl ({ videoId, title, startSeconds, endSeconds } as entry) =
-    li []
+    li [ styles Styles.historyEntry ]
         [ a
             [ href <| permalink baseUrl entry ]
             [ img
-                [ width 120
-                , height 90
+                [ width 60
+                , height 45
                 , src <| thumbUrl videoId
+                , styles Styles.historyThumb
                 ]
                 []
-            , span [] [ text <| truncateText 40 title ]
+            , span [] [ text <| truncateText 70 title ]
+            , br [] []
             , renderRange startSeconds endSeconds
             ]
         ]
