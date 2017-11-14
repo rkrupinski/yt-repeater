@@ -90,8 +90,16 @@ export default function lazy() {
       switch (playerState) {
         case api.PlayerState.PLAYING:
           {
-            const { title } = player.getVideoData();
             const duration = Math.round(player.getDuration());
+            let title;
+
+            /* eslint-disable */
+            try {
+              title = player.j.videoData.title; // WTF YouTube?
+            } catch (err) {
+              title = '¯\_(ツ)_/¯';
+            }
+            /* eslint-enable */
 
             if (!data.metaSent) {
               this.fire('video-meta', {
