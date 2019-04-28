@@ -91,15 +91,7 @@ export default function lazy() {
         case api.PlayerState.PLAYING:
           {
             const duration = Math.round(player.getDuration());
-            let title;
-
-            /* eslint-disable */
-            try {
-              title = player.j.videoData.title; // WTF YouTube?
-            } catch (err) {
-              title = '¯\_(ツ)_/¯';
-            }
-            /* eslint-enable */
+            const { title } = player.getVideoData();
 
             if (!data.metaSent) {
               this.fire('video-meta', {
@@ -112,9 +104,7 @@ export default function lazy() {
             }
 
             this.fire('video-playing', {
-              detail: Object.assign({}, data.playing, {
-                title,
-              }),
+              detail: Object.assign({}, data.playing, { title }),
             });
           }
           break;
