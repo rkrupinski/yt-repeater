@@ -19,7 +19,7 @@
     "elm-css-webpack-loader": "^3.3.0",
     "elm-hot-loader": "^0.5.4",
     "elm-webpack-loader": "^4.3.1",
-    "eslint": "^4.9.0",
+    "eslint": "^4.18.2",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-loader": "^1.9.0",
     "eslint-plugin-import": "^2.8.0",
